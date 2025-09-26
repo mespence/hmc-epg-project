@@ -13,7 +13,9 @@ from PyQt6.QtWidgets import (
 )
 
 from live_view.LiveDataWindow import LiveDataWindow
+from live_view.DeviceViewWindow import DeviceViewWindow
 from live_view.SliderPanel import SliderPanel
+from utils.ToggleSwitch import ToggleSwitch
 from live_view.socket.ConnectionIndicator import ConnectionIndicator
 from live_view.socket.EPGSocket import SocketClient, SocketServer
 from live_view.device_panel.DevicePanel import DevicePanel
@@ -29,6 +31,10 @@ class LiveViewTab(QWidget):
         self.initial_timestamp: float = None  # unix timestamp of the first data point in a recording
         self.total_pause_time: float = 0  # the cumulative length of any pauses
         self.pause_start_time: float = None # unix timestamp of the most recent pause
+
+        self.devicewindow = DeviceViewWindow()
+        self.devicewindow.getPlotItem().hideButtons()
+        self.devicewindow.setVisible(False)
 
         if recording_settings:
             self.datawindow = LiveDataWindow(recording_settings, parent=self)
@@ -49,7 +55,8 @@ class LiveViewTab(QWidget):
         self.receive_loop = threading.Thread(target=self._socket_recv_loop, daemon=True)
         self.receive_loop.start()
 
-        
+        self.deviceview_toggle = ToggleSwitch("live view", "device monitoring", parent=self)
+        self.deviceview_toggle.toggled.connect(self.toggle_deviceview)
 
         self.pause_live_button = QPushButton("Pause Live View", self)
         self.pause_live_button.setCheckable(True)
@@ -188,10 +195,10 @@ class LiveViewTab(QWidget):
         
 
         bottom_controls = QHBoxLayout()
+        bottom_controls.addWidget(self.deviceview_toggle)
         bottom_controls.addStretch()
         bottom_controls.addWidget(self.pause_live_button)
         bottom_controls.addWidget(self.add_comment_button)
-        bottom_controls.addStretch()
 
         bottom_controls_widget = QWidget()
         bottom_controls_widget.setLayout(bottom_controls)
@@ -204,6 +211,7 @@ class LiveViewTab(QWidget):
         center_layout = QVBoxLayout()
         center_layout.addWidget(top_controls_widget)
         center_layout.addWidget(self.datawindow)
+        center_layout.addWidget(self.devicewindow)
         center_layout.addWidget(bottom_controls_widget)
 
         main_layout = QHBoxLayout()
@@ -444,5 +452,18 @@ class LiveViewTab(QWidget):
             Qt.ConnectionType.QueuedConnection,
             Q_ARG(dict, value),
         )
+    
+    def toggle_deviceview(self):
+
+        if self.datawindow.isVisible():
+            self.datawindow.setVisible(False)
+            self.devicewindow.setVisible(True)
+        else:
+            self.datawindow.setVisible(True)
+            self.devicewindow.setVisible(False)
+
+        
+
+
    
 

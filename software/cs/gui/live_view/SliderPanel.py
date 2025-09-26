@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSlot
 
-from utils.ToggleSwitch import ACDCToggle
+from utils.ToggleSwitch import ToggleSwitch
 import sys
 
 class SliderPanel(QWidget):
@@ -34,7 +34,7 @@ class SliderPanel(QWidget):
         grid.setHorizontalSpacing(0)
 
         # DC/AC Toggle Switch
-        self.mode_toggle = ACDCToggle()
+        self.mode_toggle = ToggleSwitch("DC", "AC")
         grid.addWidget(self.mode_toggle, 0, 1)
 
         
@@ -233,7 +233,7 @@ class SliderPanel(QWidget):
 
         # Connect all controls except AC/DC toggle
         for label, item in self.controls.items():
-            if isinstance(item, ACDCToggle):
+            if isinstance(item, ToggleSwitch):
                 item.toggled.connect(self.on_mode_change)
             if isinstance(item, QSlider):
                 item.valueChanged.connect(lambda val, l=label: self.send_control_update(l, val))
@@ -336,7 +336,7 @@ class SliderPanel(QWidget):
 
 
 
-        if isinstance(widget, ACDCToggle):
+        if isinstance(widget, ToggleSwitch):
             if widget.isChecked() != int(value):
                 widget.toggle_state()
         elif isinstance(widget, QSlider):

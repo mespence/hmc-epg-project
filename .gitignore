@@ -63,3 +63,4 @@ firmware/*~
     
 # Build
 firmware/build*/
+.DS_Store

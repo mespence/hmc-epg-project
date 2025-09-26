@@ -78,15 +78,15 @@ class SwitchTrack(QWidget):
         painter.drawEllipse(QRectF(self._thumb_x, margin, thumb_diameter, thumb_diameter))
         
 
-class ACDCToggle(QWidget):
+class ToggleSwitch(QWidget):
     toggled = pyqtSignal(int)
 
-    def __init__(self, parent=None, gap=6):
+    def __init__(self, left_text, right_text, parent=None, gap=6):
         super().__init__(parent)
         self.gap = gap
 
-        self.dc_label = QLabel("DC", self)
-        self.ac_label = QLabel("AC", self)
+        self.dc_label = QLabel(left_text, self)
+        self.ac_label = QLabel(right_text, self)
         self.track = SwitchTrack(scale=0.75, parent=self)
 
         # Consistent font and alignment
@@ -161,7 +161,7 @@ class MainWindow(QWidget):
         layout = QVBoxLayout(self)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        self.toggle = ACDCToggle()
+        self.toggle = ToggleSwitch()
         layout.addWidget(self.toggle)
 
 
