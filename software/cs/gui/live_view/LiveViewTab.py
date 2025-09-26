@@ -35,6 +35,7 @@ class LiveViewTab(QWidget):
         else:
             self.datawindow = LiveDataWindow(parent=self)
         self.datawindow.getPlotItem().hideButtons()
+   
 
 
         # === Socket ===
@@ -111,7 +112,7 @@ class LiveViewTab(QWidget):
 
         self.slider_panel = SliderPanel(parent=self)
         #self.slider_panel.off_button.clicked.connect(self.end_recording)
-        self.slider_panel.setEnabled(False) # TODO: update to auto close if no device connected
+        #self.slider_panel.setEnabled(False) # TODO: update to auto close if no device connected
 
         self.slider_button = QToolButton(parent=self)
         self.slider_button.setText("EPG Controls")
@@ -137,13 +138,9 @@ class LiveViewTab(QWidget):
             }
         """)
 
-        self.update_button_state(True)
-
-
-        
+        #self.update_button_state(True)
 
         top_controls = QHBoxLayout()
-
 
         if sys.platform.startswith("win"):
             self.device_panel = DevicePanel(parent=self)
@@ -171,7 +168,6 @@ class LiveViewTab(QWidget):
                 }
             """)
             top_controls.addWidget(self.device_button)
-
 
         top_controls.addStretch()  # push slider button to right
         top_controls.addWidget(self.connection_indicator)
