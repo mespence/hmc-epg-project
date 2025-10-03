@@ -7,10 +7,10 @@ from utils.ResourcePath import resource_path
 
 def load_fonts():
     fonts = [
-        "fonts/Inter-Regular.otf",
-        "fonts/Inter-Bold.otf",
-        "fonts/Inter-Italic.otf",
-        "fonts/Inter-BoldItalic.otf"
+        "resources/fonts/Inter-Regular.otf",
+        "resources/fonts/Inter-Bold.otf",
+        "resources/fonts/Inter-Italic.otf",
+        "resources/fonts/Inter-BoldItalic.otf"
     ]
     for font in fonts:
         QFontDatabase.addApplicationFont(resource_path(font))

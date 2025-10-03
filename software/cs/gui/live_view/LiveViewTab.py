@@ -116,7 +116,7 @@ class LiveViewTab(QWidget):
 
         self.slider_button = QToolButton(parent=self)
         self.slider_button.setText("EPG Controls")
-        icon_path = resource_path("icons/sliders.svg")
+        icon_path = resource_path("resources/icons/sliders.svg")
         colored_icon = QIcon(svg_to_colored_pixmap(icon_path, "#DDDDDD", 24))
         self.slider_button.setIcon(colored_icon)
         self.slider_button.setIconSize(QSize(24, 24))
@@ -146,7 +146,7 @@ class LiveViewTab(QWidget):
             self.device_panel = DevicePanel(parent=self)
             self.device_button = QToolButton(parent=self)
             self.device_button.setText("EPG Devices")
-            icon_path = resource_path("icons/bug.svg")
+            icon_path = resource_path("resources/icons/bug.svg")
             colored_icon = QIcon(svg_to_colored_pixmap(icon_path, "#DDDDDD", 24))
             self.device_button.setIcon(colored_icon)
             self.device_button.setIconSize(QSize(24, 24))

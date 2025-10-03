@@ -1,8 +1,8 @@
 import subprocess
 import os
 
-icon_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'icons'))
-font_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'fonts'))
+icon_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'resources/icons'))
+font_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'resources/fonts'))
 logo_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'SCIDO.png'))
 ico_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'SCIDO.ico'))
 

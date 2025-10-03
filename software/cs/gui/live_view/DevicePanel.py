@@ -113,7 +113,7 @@ class DeviceWidget(QWidget):
         main_layout.setSpacing(12)
 
         self.icon_label = QLabel()
-        self.icon_label.setPixmap(svg_to_colored_pixmap("icons/circuit-board.svg", "#EBEBEB", 40))
+        self.icon_label.setPixmap(svg_to_colored_pixmap("resources/icons/circuit-board.svg", "#EBEBEB", 40))
         main_layout.addWidget(self.icon_label)
 
         self.info_label = QLabel()
@@ -137,7 +137,7 @@ class DeviceWidget(QWidget):
 
         # Existing edit dropdown
         self.edit_button = QToolButton()
-        icon_pixmap = svg_to_colored_pixmap("icons/edit.svg", "white", 30)
+        icon_pixmap = svg_to_colored_pixmap("resources/icons/edit.svg", "white", 30)
         self.edit_button.setIcon(QIcon(icon_pixmap))
         self.edit_button.setIconSize(QSize(24, 24))
         self.edit_button.setToolTip("Edit this device")
@@ -265,7 +265,7 @@ class AddDeviceWidget(QWidget):
         layout.setSpacing(12)
 
         self.icon_label = QLabel()
-        self.icon_label.setPixmap(svg_to_colored_pixmap("icons/plus.svg", "#EBEBEB", 24))
+        self.icon_label.setPixmap(svg_to_colored_pixmap("resources/icons/plus.svg", "#EBEBEB", 24))
         layout.addWidget(self.icon_label)
 
         self.text_label = QLabel("Add new EPG device")
@@ -281,7 +281,7 @@ class AddDeviceWidget(QWidget):
     def setEnabled(self, enabled: bool):
         super().setEnabled(enabled)
         color = "#EBEBEB" if enabled else "#777777"
-        self.icon_label.setPixmap(svg_to_colored_pixmap("icons/plus.svg", color, 24))
+        self.icon_label.setPixmap(svg_to_colored_pixmap("resources/icons/plus.svg", color, 24))
 
     def enterEvent(self, event):
         if self.isEnabled():

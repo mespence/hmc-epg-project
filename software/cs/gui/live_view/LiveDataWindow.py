@@ -875,7 +875,7 @@ class LiveDataWindow(PlotWidget):
         self.comments.clear()
         
         comments_df = self.df[~self.df["comments"].isnull()]
-        icon_path = resource_path("icons/message.svg")
+        icon_path = resource_path("resources/icons/message.svg")
         for time, text in zip(comments_df["time"], comments_df["comments"]):
             marker = CommentMarker(time, text, self, icon_path=icon_path)
             self.comments[time] = marker

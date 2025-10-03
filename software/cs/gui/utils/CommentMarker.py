@@ -27,7 +27,7 @@ class CommentMarker:
     zoom, pan, and user interactions in the waveform editor.
     """
     def __init__(self, time: float, text: str, datawindow: PlotWidget,
-                 icon_path: str = resource_path("icons/message.svg")):
+                 icon_path: str = resource_path("resources/icons/message.svg")):
         """
         Initializes the comment marker with a vertical line and icon.
 
@@ -36,7 +36,7 @@ class CommentMarker:
             text (str): The comment text associated with this marker.
             datawindow (PlotWidget): The parent plot widget this marker belongs to.
             icon_path (str): Path to the SVG icon for the comment.
-                             Defaults to 'icons/message.svg'.
+                             Defaults to 'resources/icons/message.svg'.
         """
         self.time = time
         self.text = text
