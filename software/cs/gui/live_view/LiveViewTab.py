@@ -36,10 +36,15 @@ class LiveViewTab(QWidget):
         self.devicewindow.getPlotItem().hideButtons()
         self.devicewindow.setVisible(False)
 
+        # temporary buffer for incoming data, to be added to full xy_data every plot update
+        self.buffer_data: list[tuple[float, float]] = []
+        self.buffer_lock = threading.Lock() # lock to prevent data loss
+
+
         if recording_settings:
-            self.datawindow = LiveDataWindow(recording_settings, parent=self)
+            self.datawindow = LiveDataWindow( recording_settings, data_source = self, parent=self)
         else:
-            self.datawindow = LiveDataWindow(parent=self)
+            self.datawindow = LiveDataWindow(data_source = self, parent=self)
         self.datawindow.getPlotItem().hideButtons()
 
 

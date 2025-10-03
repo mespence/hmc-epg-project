@@ -1,17 +1,20 @@
+import time
+
+from numpy.typing import NDArray
 import sys
 import os
 import numpy as np
 import threading
+import random
 sys.path.insert(0, os.path.abspath("/Users/clairewang/Documents/GitHub/hmc-epg-project/software/cs/gui"))
 
 
 from pyqtgraph import PlotWidget, PlotItem, ScatterPlotItem, PlotDataItem, mkPen, InfiniteLine, TextItem
 
-from device_view_tester import data_simulator
-
 from PyQt6.QtCore import QTimer, Qt, QPointF
 from PyQt6.QtGui import QWheelEvent, QMouseEvent, QCursor, QKeyEvent, QGuiApplication
-from PyQt6.QtWidgets import QApplication, QDialog, QVBoxLayout, QLabel, QDialogButtonBox, QMessageBox, QFileDialog
+from PyQt6.QtWidgets import QApplication
+from pyqtgraph import AxisItem
 
 from utils.PanZoomViewBox import PanZoomViewBox
 from utils.ResourcePath import resource_path
@@ -27,17 +30,23 @@ class DeviceViewWindow(PlotWidget):
     - Zooming and panning via custom PanZoomViewBox.
     """
 
-    def __init__(self, parent = None):
+    def __init__(self, data_source = None, parent = None):
         """ Initalizes the DeviceViewWindow object.
 
             Sets up plotting area/custom viwebox and UI elements,
             thread-safe data buffers, live rendering timer at ~60 Hz"""
+            
         # --- GENERAL INIT ITEMS ---
-        super().__init__(parent = parent, viewBox=PanZoomViewBox(datawindow=self))
+        # init custom plot for fixed seconds ago axis
+        custom_bottom_axis = SecondsAgoAxis(self, orientation='bottom')
+        custom_plot_item = PlotItem(axisItems={'bottom': custom_bottom_axis})
+        super().__init__(parent = parent, plotItem=custom_plot_item, viewBox=PanZoomViewBox(datawindow=self))
         self.plot_item: PlotItem = self.getPlotItem()
         self.viewbox: PanZoomViewBox = self.plot_item.getViewBox() # the plotting area (no axes, etc.)
         self.viewbox.datawindow = self
         self.viewbox.menu = None  # disable default menu
+        # allow only vertical panning and zooming
+        self.viewbox.setMouseEnabled(x=False, y=True)
 
         settings.settingChanged.connect(self.on_setting_changed)
 
@@ -63,7 +72,7 @@ class DeviceViewWindow(PlotWidget):
 
         self.plot_item.addItem(self.curve)
         self.plot_item.addItem(self.scatter)
-        self.plot_item.setLabel("bottom", "<b>Time [s]</b>", color="black")
+        self.plot_item.setLabel("bottom", "<b>Seconds Ago[s]</b>", color="black")
         self.plot_item.setLabel("left", "<b>Voltage [V]</b>", color="black")
         self.plot_item.showGrid(x=settings.get("show_v_grid"), y=settings.get("show_h_grid"))
         self.plot_item.layout.setContentsMargins(30, 30, 30, 20)
@@ -79,10 +88,33 @@ class DeviceViewWindow(PlotWidget):
         self.default_scroll_window = 10
         self.auto_scroll_window = 10
        
-        # --- BUFFER ---
-        # temporary buffer for incoming data, to be added to full xy_data every plot update
-        self.buffer_data: list[tuple[float, float]] = []
-        self.buffer_lock = threading.Lock() # lock to prevent data loss
+         # --- DATA STORAGE ---
+        # holds all historical data
+        self.xy_data: list[NDArray] = [np.array([]), np.array([])]
+        self.xy_rendered: list[NDArray] = [np.array([]), np.array([])]
+        self.last_rendered_x_range = (0,0)
+
+        # connect to the live view tab's data buffer
+        self.data_source = data_source
+
+        if self.data_source is not None:
+            # share buffer and lock from the tab
+            self.buffer_data = self.data_source.buffer_data
+            self.buffer_lock = self.data_source.buffer_lock
+        else:
+            # fallback if no data_source passed
+            self.buffer_data = []
+            self.buffer_lock = threading.Lock()
+        
+        self.data_modified = False
+        
+          # Start data simulation thread inside the device window itself
+        self._start_simulator()
+
+        # Start a timer for periodic updates (e.g., 20 Hz)
+        self.plot_update_timer = QTimer()
+        self.plot_update_timer.timeout.connect(self.timed_plot_update)
+        self.plot_update_timer.start(50)
 
         # --- BASELINE ---
         self.baseline: InfiniteLine = InfiniteLine(
@@ -97,13 +129,24 @@ class DeviceViewWindow(PlotWidget):
         self.addItem(self.baseline_preview)
         self.baseline_preview.setVisible(False)
         self.baseline_preview_enabled: bool = False
+    
+    def _start_simulator(self):
+        def simulation():
+            t = 0
+            while True:
+                with self.buffer_lock:
+                    self.buffer_data.append((t, random.uniform(-1, 1)))
+                t += 1
+                time.sleep(0.5)
+
+        threading.Thread(target=simulation, daemon=True).start()
 
     def update_plot_theme(self):
         plot_theme = settings.get("plot_theme") 
         self.setBackground(plot_theme["BACKGROUND"])
 
         self.setTitle("<b>Live Waveform Viewer</b>", size="12pt", color=plot_theme["FONT_COLOR_1"])
-        self.plot_item.setLabel("bottom", "<b>Time [s]</b>", color=plot_theme["FONT_COLOR_1"])
+        self.plot_item.setLabel("bottom", "<b>Seconds Ago [s]</b>", color=plot_theme["FONT_COLOR_1"])
         self.plot_item.setLabel("left", "<b>Voltage [V]</b>", color=plot_theme["FONT_COLOR_1"])
 
         self.compression_text.setColor(plot_theme["FONT_COLOR_1"])
@@ -171,6 +214,8 @@ class DeviceViewWindow(PlotWidget):
         self.xy_data[0] = np.concatenate((self.xy_data[0], new_xy_data[:, 0]))
         self.xy_data[1] = np.concatenate((self.xy_data[1], new_xy_data[:, 1]))
 
+        self.current_time = new_xy_data[-1,0]
+
     def timed_plot_update(self):
         """
         Periodically triggers a refresh the plot.
@@ -180,6 +225,175 @@ class DeviceViewWindow(PlotWidget):
         """
         self.integrate_buffer_to_np()
         self.update_plot()
+
+    
+    def downsample_visible(
+        self, full_xy_data: NDArray, x_range: tuple[float, float] = None, max_points=4000, method = 'peak'
+    ) -> None:
+        """
+        Downsamples waveform data in the visible x range using the selected method.
+        Modifies self.xy_rendered and sorts it (efficient for comment insertion idx
+        finding).
+
+        Parameters:
+            xy (NDArray): full xy data array.
+            x_range (tuple[float, float]): Optional x-axis range to downsample.
+            max_points (int): Max number of points to plot.
+            method (str): 'subsample', 'mean', or 'peak' downsampling method.
+        
+        NOTE: 
+            `subsample` samples the first point of each bin (fastest)
+            `mean` averages each bin
+            `peak` returns the min and max point of each bin (slowest, best looking)
+        """
+        x, y = full_xy_data
+
+        # Filter to x_range if provided
+        if x_range is not None:
+            x_min, x_max = x_range
+
+            left_idx = np.searchsorted(x, x_min, side="left")
+            right_idx = np.searchsorted(x, x_max, side="right")
+
+            if right_idx - left_idx <= 250: 
+                # render additional point on each side at very high zooms
+                left_idx = max(0, left_idx - 1)
+                right_idx = min(len(x), right_idx + 1)
+  
+  
+            x_sliced = x[left_idx:right_idx].copy()
+            y_sliced = y[left_idx:right_idx].copy()   
+        else:
+            x_sliced = x.copy()
+            y_sliced = y.copy()   
+    
+        num_points = len(x_sliced)
+
+        if num_points <= max_points:  # no downsampling needed
+            # referencing self.xy_data
+            self.xy_rendered[0] = x_sliced
+            self.xy_rendered[1] = y_sliced
+            return
+
+        if method == 'subsampling': 
+            stride = num_points // max_points
+            x_out = x_sliced[::stride].copy()
+            y_out = y_sliced[::stride].copy()
+
+        elif method == 'mean':
+            stride = num_points // max_points
+            num_windows = num_points // stride
+            start_idx = stride // 2
+            x_out = x_sliced[start_idx : start_idx + num_windows * stride : stride].copy()
+            y_out = y_sliced[:num_windows * stride].reshape(num_windows, stride).mean(axis = 1)
+        elif method == 'peak':
+            stride = max(1, num_points // (max_points // 2))  # each window gives 2 points
+            num_windows = num_points // stride
+
+            x_win = x_sliced[stride // 2 : stride // 2 + num_windows * stride : stride]
+            y_reshaped = y_sliced[: num_windows * stride].reshape(num_windows, stride)
+
+            # create output arrays for peaks
+            x_out = np.empty(num_windows * 2)
+            y_out = np.empty(num_windows * 2)
+
+            # assign peaks
+            y_out[::2] = y_reshaped.max(axis=1)
+            y_out[1::2] = y_reshaped.min(axis=1)
+            x_out[::2] = x_win
+            x_out[1::2] = x_win
+
+            # if receive another mismatched shape error try this
+                # # Safely calculate number of full windows
+                # stride = max(1, num_points // (max_points // 2))
+                # num_windows = num_points // stride
+                # total_pts = num_windows * stride
+
+                # # Slice to full window size
+                # x_window = x[:total_pts]
+                # y_window = y[:total_pts]
+
+                # x_win = x_window[stride // 2::stride][:num_windows]  # in case of rounding issues
+                # y_reshaped = y_window.reshape(num_windows, stride)
+
+                # # Now generate x and y downsampled
+                # x_out = np.repeat(x_win, 2)
+                # y_out = np.empty(num_windows * 2)
+                # y_out[::2] = y_reshaped.max(axis=1)
+                # y_out[1::2] = y_reshaped.min(axis=1)
+        else:
+            raise ValueError(
+                'Invalid "method" arugment. ' \
+                'Please select either "subsampling", "mean", or "peak".'
+            )
+
+        self.xy_rendered[0] = x_out
+        self.xy_rendered[1] = y_out
+
+        # sort xy_rendered for ability to add comment to past and move comment
+        sort_idx = np.argsort(self.xy_rendered[0])
+        self.xy_rendered[0] = self.xy_rendered[0][sort_idx]
+        self.xy_rendered[1] = self.xy_rendered[1][sort_idx]
+
+    def update_plot(self):
+        """
+        Redraws the waveform on the screen if live mode is enabled
+        or the user manually adjusts the viewbox.
+
+        - Computes the current view range from the ViewBox.
+        - Downsamples data if zoomed out.
+        - Updates the curve with new x and y values.
+        - Enables scatter for zoom levels greater than 300%
+        - Avoids unnecessary re-renders if the view hasn't changed.
+        """
+        current_x_range, _ = self.viewbox.viewRange()
+
+        rerender = False
+        if self.live_mode:
+            rerender = True
+        else:
+            if current_x_range != self.last_rendered_x_range or current_x_range[1] > self.current_time:
+                rerender = True
+
+        if not rerender:
+            # no change in viewbox, just update leading line to follow live data
+            self.leading_line.setPos(self.current_time)
+            self.viewbox.update()
+            return
+
+        # rerender needed
+        self.viewbox.setLimits(xMin=None, xMax=None, yMin=None, yMax=None) # clear stale data (avoids warning)
+
+        if self.live_mode:
+            end = self.current_time
+            start = max(0, end - self.auto_scroll_window)
+            offset = 0.1 # when zoomed in, leading line lags with plotting so need offset to keep hidden
+            self.viewbox.setXRange(start, end, padding=0)
+            self.downsample_visible(self.xy_data, x_range=(start, end))
+            self.leading_line.setPos(end+offset)
+        else:
+            self.downsample_visible(self.xy_data, x_range=current_x_range)
+            self.leading_line.setPos(self.current_time)
+
+        # SCATTER
+        time_span = current_x_range[1] - current_x_range[0]
+        plot_width = self.viewbox.geometry().width() * self.devicePixelRatioF()
+        pix_per_second = plot_width / time_span if time_span != 0 else float("inf")
+        default_pix_per_second = plot_width / self.default_scroll_window
+        self.zoom_level = pix_per_second / default_pix_per_second
+
+        # scatter if zoom is greater than 300%
+        self.scatter.setVisible(bool(self.zoom_level >= 3))
+        if self.scatter.isVisible():
+            self.scatter.setData(self.xy_rendered[0], self.xy_rendered[1])
+        else:
+            self.scatter.setData([], []) # clear scatter data when not visible
+
+        self.curve.setData(self.xy_rendered[0], self.xy_rendered[1])
+        self.viewbox.update()
+
+        # update last rendered range
+        self.last_rendered_x_range = current_x_range
 
     def update_compression(self) -> None:
         """
@@ -319,13 +533,27 @@ class DeviceViewWindow(PlotWidget):
         """
         self.viewbox.wheelEvent(event)
 
-import time
+class SecondsAgoAxis(AxisItem):
+    def __init__(self, device_window, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.device_window = device_window
+
+    def tickStrings(self, values, scale, spacing):
+        current_time = self.device_window.current_time
+        labels = []
+        # convert to seconds ago with (current_time - tick_value)
+        for v in values:
+            sec_ago = current_time - v
+            if sec_ago >= 0:
+                labels.append(f"{sec_ago:.1f}")
+            else: 
+                labels.append("")
+        return labels
 
 if __name__ == "__main__":
     app = QApplication([])
     window = DeviceViewWindow()
     window.resize(1000, 500)
     window.show()
-    time.sleep(2)
-    data_simulator(window)
+
     sys.exit(app.exec())

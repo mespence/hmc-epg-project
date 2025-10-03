@@ -257,7 +257,8 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event = None):
         label_dw = self.label_tab.datawindow
         live_dw = self.live_view_tab.datawindow
-        bt_manager = self.live_view_tab.device_panel.bt_manager
+        if sys.platform.startswith("win"):
+            bt_manager = self.live_view_tab.device_panel.bt_manager
 
         label_view_unsaved = not label_dw.checkForUnsavedChanges()
         live_view_unsaved = live_dw.data_modified

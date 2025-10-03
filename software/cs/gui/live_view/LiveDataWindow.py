@@ -34,7 +34,7 @@ class LiveDataWindow(PlotWidget):
     - Periodic auto-backup of waveform and comments.
     - Export functionality for waveform data and comments.
     """
-    def __init__(self, recording_settings = None, parent = None):
+    def __init__(self, data_source = None, recording_settings = None, parent = None):
         """
         Initializes the LiveDataWindow widget.
 
@@ -44,7 +44,7 @@ class LiveDataWindow(PlotWidget):
         """
         # --- GENERAL INIT ITEMS ---
         super().__init__(parent = parent, viewBox=PanZoomViewBox(datawindow=self))
-
+        
         self.plot_item: PlotItem = self.getPlotItem()
         self.viewbox: PanZoomViewBox = self.plot_item.getViewBox() # the plotting area (no axes, etc.)
         self.viewbox.datawindow = self
@@ -110,9 +110,17 @@ class LiveDataWindow(PlotWidget):
         self.epgdata = self.parent().parent().epgdata
         self.xy_data: list[NDArray] = [np.array([]), np.array([])]
 
-        # temporary buffer for incoming data, to be added to full xy_data every plot update
-        self.buffer_data: list[tuple[float, float]] = []
-        self.buffer_lock = threading.Lock() # lock to prevent data loss
+       # connect to the live view tab's data buffer
+        self.data_source = data_source
+
+        if self.data_source is not None:
+            # share buffer and lock from the tab
+            self.buffer_data = self.data_source.buffer_data
+            self.buffer_lock = self.data_source.buffer_lock
+        else:
+            # fallback if no data_source passed
+            self.buffer_data = []
+            self.buffer_lock = threading.Lock()
 
         # store currently rendered data (downsampled for display)
         self.xy_rendered: list[NDArray] = [np.array([]), np.array([])]
