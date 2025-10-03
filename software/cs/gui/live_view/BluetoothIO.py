@@ -10,7 +10,7 @@ from PyQt6.QtCore import QObject, pyqtSignal, QThread
 BLE_ADDRESS = "C2:83:79:F8:C2:86"  # sw team's test board. acutal address will be passed in at runtime
 NOTIFY_CHARACTERISTIC_UUID = "445817D2-9E86-1078-1F76-703DC002EF42"
 WRITE_CHARACTERISTIC_UUID  = "445817D2-9E86-1078-1F76-703DC002EF43"  
-MAX_PACKET = 180  # conservative; raise if you negotiate larger MTU
+MAX_PACKET = 180  # conservative; maybe raise?
 # ----------------------------
 
 # Windows WinRT needs STA when using Bleak in a non-main thread
@@ -25,6 +25,7 @@ except Exception:
 
 class BluetoothIO(QObject):
     """
+    TODO: fix QThread error on app close
     Qt-friendly Bluetooth Low Energy (BLE) I/O manager.
 
     This class encapsulates all asynchronous BLE communication
@@ -106,7 +107,6 @@ class BluetoothIO(QObject):
         self._post_to_loop(_ask_stop)
 
         self._thread.quit()
-        self._thread.wait(1500)
         self._thread = None
 
     def send(self, payload: bytes):

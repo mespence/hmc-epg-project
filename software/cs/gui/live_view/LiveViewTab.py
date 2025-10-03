@@ -16,7 +16,7 @@ from live_view.LiveDataWindow import LiveDataWindow
 from live_view.SliderPanel import SliderPanel
 from live_view.socket.ConnectionIndicator import ConnectionIndicator
 from live_view.socket.EPGSocket import SocketClient, SocketServer
-from live_view.device_panel.DevicePanel import DevicePanel
+from live_view.DevicePanel import DevicePanel
 from utils.ResourcePath import resource_path
 from utils.SVGIcon import svg_to_colored_pixmap
 
