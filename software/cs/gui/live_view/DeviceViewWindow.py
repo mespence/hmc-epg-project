@@ -35,19 +35,19 @@ class DeviceViewWindow(PlotWidget):
 
             Sets up plotting area/custom viwebox and UI elements,
             thread-safe data buffers, live rendering timer at ~60 Hz"""
-            
-        # --- GENERAL INIT ITEMS ---
-        # init custom plot for fixed seconds ago axis
-        custom_bottom_axis = SecondsAgoAxis(self, orientation='bottom')
-        custom_plot_item = PlotItem(axisItems={'bottom': custom_bottom_axis})
-        super().__init__(parent = parent, plotItem=custom_plot_item, viewBox=PanZoomViewBox(datawindow=self))
-        self.plot_item: PlotItem = self.getPlotItem()
-        self.viewbox: PanZoomViewBox = self.plot_item.getViewBox() # the plotting area (no axes, etc.)
-        self.viewbox.datawindow = self
-        self.viewbox.menu = None  # disable default menu
-        # allow only vertical panning and zooming
-        self.viewbox.setMouseEnabled(x=False, y=True)
+        super().__init__(parent=parent)
+        self.window_type = "device_view" # unique definition for PanZoomViewBox check
 
+        # --- GENERAL INIT ITEMS ---
+
+        # Create custom axis
+        fixed_axis = FixedSecondsAgoAxis(device_window=self, orientation='bottom')
+
+        self.viewbox = PanZoomViewBox(datawindow=self)
+        self.plot_item = PlotItem(viewBox=self.viewbox, axisItems={'bottom': fixed_axis})
+        self.setCentralItem(self.plot_item)
+
+        self.viewbox.menu = None
         settings.settingChanged.connect(self.on_setting_changed)
 
         self.compression = 0
@@ -67,7 +67,7 @@ class DeviceViewWindow(PlotWidget):
         self.chart_height: int = 400
         self.setGeometry(0, 0, self.chart_width, self.chart_height)
         self.setBackground("white")
-        self.setTitle("<b>EPG Device Monitor<b>", color="black", size="12pt")
+        self.plot_item.setTitle("<b>EPG Device Monitor<b>", color="black", size="12pt")
         self.viewbox.setBorder(mkPen("black", width=3))
 
         self.plot_item.addItem(self.curve)
@@ -77,6 +77,7 @@ class DeviceViewWindow(PlotWidget):
         self.plot_item.showGrid(x=settings.get("show_v_grid"), y=settings.get("show_h_grid"))
         self.plot_item.layout.setContentsMargins(30, 30, 30, 20)
         self.plot_item.disableAutoRange() # no autoscaling
+        self.plot_item.setYRange(-1, 1)
 
         self.leading_line: InfiniteLine = InfiniteLine(pos=0, angle=90, movable=False, pen=mkPen("red", width=3))
         self.addItem(self.leading_line)
@@ -145,7 +146,7 @@ class DeviceViewWindow(PlotWidget):
         plot_theme = settings.get("plot_theme") 
         self.setBackground(plot_theme["BACKGROUND"])
 
-        self.setTitle("<b>Live Waveform Viewer</b>", size="12pt", color=plot_theme["FONT_COLOR_1"])
+        self.plot_item.setTitle("<b>Live Waveform Viewer</b>", size="12pt", color=plot_theme["FONT_COLOR_1"])
         self.plot_item.setLabel("bottom", "<b>Seconds Ago [s]</b>", color=plot_theme["FONT_COLOR_1"])
         self.plot_item.setLabel("left", "<b>Voltage [V]</b>", color=plot_theme["FONT_COLOR_1"])
 
@@ -303,24 +304,6 @@ class DeviceViewWindow(PlotWidget):
             x_out[::2] = x_win
             x_out[1::2] = x_win
 
-            # if receive another mismatched shape error try this
-                # # Safely calculate number of full windows
-                # stride = max(1, num_points // (max_points // 2))
-                # num_windows = num_points // stride
-                # total_pts = num_windows * stride
-
-                # # Slice to full window size
-                # x_window = x[:total_pts]
-                # y_window = y[:total_pts]
-
-                # x_win = x_window[stride // 2::stride][:num_windows]  # in case of rounding issues
-                # y_reshaped = y_window.reshape(num_windows, stride)
-
-                # # Now generate x and y downsampled
-                # x_out = np.repeat(x_win, 2)
-                # y_out = np.empty(num_windows * 2)
-                # y_out[::2] = y_reshaped.max(axis=1)
-                # y_out[1::2] = y_reshaped.min(axis=1)
         else:
             raise ValueError(
                 'Invalid "method" arugment. ' \
@@ -510,9 +493,9 @@ class DeviceViewWindow(PlotWidget):
         super().mouseMoveEvent(event)
 
         point = self.window_to_viewbox(event.position())
-        x, y = point.x(), point.y()
+        y = point.x(), point.y()
 
-        (x_min, x_max), (y_min, y_max) = self.viewbox.viewRange()
+        (y_min, y_max) = self.viewbox.viewRange()
 
         if self.baseline_preview_enabled:
             if y_min <= y <= y_max:
@@ -533,21 +516,22 @@ class DeviceViewWindow(PlotWidget):
         """
         self.viewbox.wheelEvent(event)
 
-class SecondsAgoAxis(AxisItem):
-    def __init__(self, device_window, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.device_window = device_window
 
-    def tickStrings(self, values, scale, spacing):
-        current_time = self.device_window.current_time
-        labels = []
-        # convert to seconds ago with (current_time - tick_value)
-        for v in values:
+class FixedSecondsAgoAxis(AxisItem):
+    def __init__(self, device_window, *args, **kwargs): 
+        super().__init__(*args, **kwargs) 
+        self.device_window = device_window 
+    
+    def tickStrings(self, values, scale, spacing): 
+        current_time = self.device_window.current_time 
+        labels = [] 
+        # convert to seconds ago with (current_time - tick_value) 
+        for v in values: 
             sec_ago = current_time - v
             if sec_ago >= 0:
-                labels.append(f"{sec_ago:.1f}")
+                labels.append(f"{sec_ago:.1f}") 
             else: 
-                labels.append("")
+                labels.append("") 
         return labels
 
 if __name__ == "__main__":

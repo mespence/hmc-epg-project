@@ -43,10 +43,12 @@ class LiveDataWindow(PlotWidget):
         periodiic auto-backup.
         """
         # --- GENERAL INIT ITEMS ---
-        super().__init__(parent = parent, viewBox=PanZoomViewBox(datawindow=self))
-        
+        custom_viewbox = PanZoomViewBox(datawindow=self)
+        super().__init__(parent=parent, viewBox=custom_viewbox)
+
+
         self.plot_item: PlotItem = self.getPlotItem()
-        self.viewbox: PanZoomViewBox = self.plot_item.getViewBox() # the plotting area (no axes, etc.)
+        self.viewbox: PanZoomViewBox = custom_viewbox
         self.viewbox.datawindow = self
         self.viewbox.menu = None  # disable default menu
 
