@@ -12,6 +12,7 @@ dependencies = [
     "pandas>=2.3.2",
     "plotly>=6.3.0",
     "positional-encodings>=6.0.4",
+    "pyarrow>=21.0.0",
     "scikit-learn>=1.7.2",
     "seaborn>=0.13.2",
     "tqdm>=4.67.1",

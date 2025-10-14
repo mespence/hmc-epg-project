@@ -295,7 +295,7 @@ def main():
     parser.add_argument("--model_path", type = str, required = True)
     parser.add_argument("--save_path", type = str, required = True)
     parser.add_argument("--model_name", type = str, required = True)
-    parser.add_argument()
+    #parser.add_argument()
     #parser.add_argument("--augment", action="store_true")
     #parser.add_argument("--post_process", type = str, required = False) # can either be s/smooth or viterbi/m
     parser.add_argument("--epochs", type = int, required=False)
