@@ -2,11 +2,9 @@ import time
 
 from numpy.typing import NDArray
 import sys
-import os
 import numpy as np
 import threading
 import random
-sys.path.insert(0, os.path.abspath("/Users/clairewang/Documents/GitHub/hmc-epg-project/software/cs/gui"))
 
 
 from pyqtgraph import PlotWidget, PlotItem, ScatterPlotItem, PlotDataItem, mkPen, InfiniteLine, TextItem
@@ -17,17 +15,17 @@ from PyQt6.QtWidgets import QApplication
 from pyqtgraph import AxisItem
 
 from utils.PanZoomViewBox import PanZoomViewBox
-from utils.ResourcePath import resource_path
 from settings import settings
 
 class DeviceViewWindow(PlotWidget):
     """
     Widget for constantly visualizing real-time waveform data streams with live updating.
+    Designed for device monitoring.
 
     Features:
     - Displays continuous data from an incoming stream.
-    - Supports live auto-scrolling or paused manual scrolling.
-    - Zooming and panning via custom PanZoomViewBox.
+    - Horizontal range customizable through settings 
+    - Vertical Zooming and panning via custom PanZoomViewBox.
     """
 
     def __init__(self, data_source = None, parent = None):
@@ -38,13 +36,15 @@ class DeviceViewWindow(PlotWidget):
         super().__init__(parent=parent)
         self.window_type = "device_view" # unique definition for PanZoomViewBox check
 
+
         # --- GENERAL INIT ITEMS ---
 
-        # Create custom axis
+        # Create custom horizontal axis ("Seconds Ago")
         fixed_axis = FixedSecondsAgoAxis(device_window=self, orientation='bottom')
 
         self.viewbox = PanZoomViewBox(datawindow=self)
-        self.plot_item = PlotItem(viewBox=self.viewbox, axisItems={'bottom': fixed_axis})
+        self.plot_item: PlotItem = PlotItem(viewBox=self.viewbox, axisItems={'bottom': fixed_axis})
+        self.plot_item.hideButtons()
         self.setCentralItem(self.plot_item)
 
         self.viewbox.menu = None
@@ -57,7 +57,9 @@ class DeviceViewWindow(PlotWidget):
         self.compression_text.setPos(QPointF(80, 15))
         self.scene().addItem(self.compression_text)
 
-         # --- UI ELEMENTS ---
+
+        # --- UI ELEMENTS ---
+
         self.curve: PlotDataItem = PlotDataItem(pen=mkPen(settings.get("data_line_color"), width=2))
         self.scatter: ScatterPlotItem = ScatterPlotItem(
             symbol="o", size=4, brush="blue"
@@ -82,14 +84,20 @@ class DeviceViewWindow(PlotWidget):
         self.leading_line: InfiniteLine = InfiniteLine(pos=0, angle=90, movable=False, pen=mkPen("red", width=3))
         self.addItem(self.leading_line)
 
-        # Live mode button
-        self.live_mode = True
+        # device mode button
+        self.device_mode = True
         self.current_time = 0
-        # for device view, follow only 10 seconds of visible data
-        self.default_scroll_window = 10
-        self.auto_scroll_window = 10
+        # for device view, follow only amount of visible data determined by settings
+        self.default_scroll_window = settings.get("dm_range")
+        self.auto_scroll_window = settings.get("dm_range")
+
+        # set initial x-rang: Display range from 0 to auto_scroll_window in absolute time
+        self.viewbox.setXRange(0, self.auto_scroll_window, padding=0)
+        self.viewbox.setLimits(xMin=0, xMax=None, yMin=-1, yMax=1)
        
-         # --- DATA STORAGE ---
+
+        # --- DATA STORAGE ---
+
         # holds all historical data
         self.xy_data: list[NDArray] = [np.array([]), np.array([])]
         self.xy_rendered: list[NDArray] = [np.array([]), np.array([])]
@@ -109,11 +117,13 @@ class DeviceViewWindow(PlotWidget):
         
         self.data_modified = False
         
-          # Start data simulation thread inside the device window itself
+        ### REMOVE LATER: FOR TESTING ###
+        # Start data simulation thread inside the device window itself
         self._start_simulator()
 
-        # Start a timer for periodic updates (e.g., 20 Hz)
+        # Start a timer for periodic updates (~60 fps)
         self.plot_update_timer = QTimer()
+        self.plot_update_timer.setInterval(int(1000/60))
         self.plot_update_timer.timeout.connect(self.timed_plot_update)
         self.plot_update_timer.start(50)
 
@@ -127,7 +137,7 @@ class DeviceViewWindow(PlotWidget):
             angle = 0, movable = False,
             pen=mkPen("gray", style = Qt.PenStyle.DashLine, width = 3),
         )
-        self.addItem(self.baseline_preview)
+        self.plot_item.addItem(self.baseline_preview)
         self.baseline_preview.setVisible(False)
         self.baseline_preview_enabled: bool = False
     
@@ -178,6 +188,16 @@ class DeviceViewWindow(PlotWidget):
             pen = mkPen(color=color, width=width)
             self.curve.setPen(pen)
             self.scatter.setPen(pen)
+        elif key == "dm_range":
+            self.auto_scroll_window = value
+            self.default_scroll_window = value
+            
+            # set new x-range 
+            self.update_plot()
+            
+            self.viewbox.update()
+            self.plot_item.getAxis('bottom').update()
+        
 
     def window_to_viewbox(self, point: QPointF) -> QPointF:
         """
@@ -322,17 +342,11 @@ class DeviceViewWindow(PlotWidget):
         """
         Redraws the waveform on the screen if live mode is enabled
         or the user manually adjusts the viewbox.
-
-        - Computes the current view range from the ViewBox.
-        - Downsamples data if zoomed out.
-        - Updates the curve with new x and y values.
-        - Enables scatter for zoom levels greater than 300%
-        - Avoids unnecessary re-renders if the view hasn't changed.
         """
         current_x_range, _ = self.viewbox.viewRange()
 
         rerender = False
-        if self.live_mode:
+        if self.device_mode:
             rerender = True
         else:
             if current_x_range != self.last_rendered_x_range or current_x_range[1] > self.current_time:
@@ -347,16 +361,20 @@ class DeviceViewWindow(PlotWidget):
         # rerender needed
         self.viewbox.setLimits(xMin=None, xMax=None, yMin=None, yMax=None) # clear stale data (avoids warning)
 
-        if self.live_mode:
+        if self.device_mode:
             end = self.current_time
-            start = max(0, end - self.auto_scroll_window)
+            start = end - self.auto_scroll_window
             offset = 0.1 # when zoomed in, leading line lags with plotting so need offset to keep hidden
             self.viewbox.setXRange(start, end, padding=0)
             self.downsample_visible(self.xy_data, x_range=(start, end))
             self.leading_line.setPos(end+offset)
+
+            self.leading_line.setPos(self.current_time + offset)
+
         else:
             self.downsample_visible(self.xy_data, x_range=current_x_range)
             self.leading_line.setPos(self.current_time)
+
 
         # SCATTER
         time_span = current_x_range[1] - current_x_range[0]
@@ -377,7 +395,7 @@ class DeviceViewWindow(PlotWidget):
 
         # update last rendered range
         self.last_rendered_x_range = current_x_range
-
+        
     def update_compression(self) -> None:
         """
         Calculates the compression level based on the current zoom level and 
@@ -429,8 +447,7 @@ class DeviceViewWindow(PlotWidget):
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         """
-        Handles mouse press events for interactions such as moving comments
-        and setting baselines.
+        Handles mouse press events for setting baselines.
 
         Parameters:
             event (QMouseEvent): The mouse press event.
@@ -438,15 +455,13 @@ class DeviceViewWindow(PlotWidget):
         super().mousePressEvent(event)
 
         point = self.window_to_viewbox(event.position())
-        x, y = point.x(), point.y()
+        y = point.y()
 
         # any press event outside of graph box shouldn't register
         if not self.getViewBox().sceneBoundingRect().contains(event.scenePosition()):
             event.ignore()
             return
-
         if event.button() == Qt.MouseButton.LeftButton:
-            # for moving comment
             if self.baseline_preview_enabled:
                 self.set_baseline(y)
             self.update_plot()
@@ -455,13 +470,11 @@ class DeviceViewWindow(PlotWidget):
         """
         Handles key press events for shortcuts.
 
-        - Shift+Space to add a comment at the current time.
         - "B" key to toggle baseline preview mode.
 
         Parameters:
             event (QKeyEvent): The key press event.
         """
-        
         if event.key() == Qt.Key.Key_B:
             if self.baseline_preview_enabled:
                 # Turn it off
@@ -480,11 +493,14 @@ class DeviceViewWindow(PlotWidget):
             self.baseline_preview.setVisible(False)
         elif event.key() == Qt.Key.Key_Up or event.key() == Qt.Key.Key_Down or event.key() == Qt.Key.Key_Left or event.key() == Qt.Key.Key_Right:
             self.viewbox.keyPressEvent(event)
+        elif event.key() == Qt.Key.Key_S and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            self.save_df()
+        
         self.viewbox.update()
     
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         """
-        Handles mouse move events to update baseline and comment previews.
+        Handles mouse move events to update baseline.
         Shows preview lines if enabled and updates plot accordingly.
 
         Parameters:
@@ -493,9 +509,9 @@ class DeviceViewWindow(PlotWidget):
         super().mouseMoveEvent(event)
 
         point = self.window_to_viewbox(event.position())
-        y = point.x(), point.y()
+        y = point.y()
 
-        (y_min, y_max) = self.viewbox.viewRange()
+        (y_min, y_max) = self.viewbox.viewRange()[1]
 
         if self.baseline_preview_enabled:
             if y_min <= y <= y_max:
@@ -516,20 +532,95 @@ class DeviceViewWindow(PlotWidget):
         """
         self.viewbox.wheelEvent(event)
 
-
 class FixedSecondsAgoAxis(AxisItem):
     def __init__(self, device_window, *args, **kwargs): 
         super().__init__(*args, **kwargs) 
-        self.device_window = device_window 
+        self.device_window = device_window
+        # Enable minor ticks to be drawn
+        self.setStyle(showValues=True)
+    
+    def tickValues(self, minVal, maxVal, size):
+        """
+        Override to return fixed tick positions.
+        This controls WHERE ticks appear on the axis.
+        """
+        current_time = self.device_window.current_time
+        
+        # Get the time range being displayed
+        time_span = maxVal - minVal
+        
+        # Determine tick spacing based on visible range
+        if time_span <= 10:
+            self.major_spacing = 1  
+        elif time_span <= 40:
+            self.major_spacing = 2  
+        elif time_span <= 60:
+            self.major_spacing = 5  
+        else:
+            self.major_spacing = 30  
+        self.minor_spacing = self.major_spacing/10
+        
+        # Calculate "seconds ago" at the edges of visible range
+        min_sec_ago = current_time - maxVal  # Leftmost edge (highest "seconds ago")
+        max_sec_ago = current_time - minVal  # Rightmost edge (lowest "seconds ago", closest to 0)
+        
+        # Generate MAJOR ticks at integer multiples of major_spacing
+        # Find the first major tick position >= min_sec_ago
+        if min_sec_ago >= 0:
+            start_major = int(np.ceil(min_sec_ago / self.major_spacing)) * self.major_spacing
+        else:
+            start_major = 0
+        
+        # Find the last major tick position <= max_sec_ago
+        end_major = int(np.floor(max_sec_ago / self.major_spacing)) * self.major_spacing
+        
+        major_ticks = []
+        sec_ago = start_major
+        while sec_ago <= end_major:
+            # Convert "seconds ago" to actual time position
+            tick_position = current_time - sec_ago
+            if minVal <= tick_position <= maxVal:
+                major_ticks.append(tick_position)
+            sec_ago += self.major_spacing
+        
+        # Generate MINOR ticks at integer multiples of minor_spacing
+        # Skip positions where major ticks exist
+        minor_ticks = []
+        if self.minor_spacing > 0:
+            if min_sec_ago >= 0:
+                start_minor = int(np.ceil(min_sec_ago / self.minor_spacing)) * self.minor_spacing
+            else:
+                start_minor = 0
+            
+            end_minor = int(np.floor(max_sec_ago / self.minor_spacing)) * self.minor_spacing
+            
+            sec_ago = start_minor
+            while sec_ago <= end_minor:
+                # Only add if it's NOT a major tick position
+                if sec_ago % self.major_spacing != 0:
+                    tick_position = current_time - sec_ago
+                    if minVal <= tick_position <= maxVal:
+                        minor_ticks.append(tick_position)
+                sec_ago += self.minor_spacing
+        
+        # Return format: [(spacing_value, [tick_positions]), ...]
+        # PyQtGraph draws major ticks with labels, minor ticks without
+        return [
+            (self.major_spacing, major_ticks),
+            (self.minor_spacing, minor_ticks)
+        ]
     
     def tickStrings(self, values, scale, spacing): 
+        """
+        Override to convert tick positions to "seconds ago" labels.
+        This controls WHAT TEXT appears at each tick.
+        """
         current_time = self.device_window.current_time 
         labels = [] 
-        # convert to seconds ago with (current_time - tick_value) 
         for v in values: 
             sec_ago = current_time - v
-            if sec_ago >= 0:
-                labels.append(f"{sec_ago:.1f}") 
+            if sec_ago % self.major_spacing == 0:
+                labels.append(f"{int(round(sec_ago))}")  
             else: 
                 labels.append("") 
         return labels

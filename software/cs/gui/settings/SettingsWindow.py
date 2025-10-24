@@ -530,12 +530,42 @@ class EPGSettingsTab(QWidget):
         for r in self.rows:
             layout.addWidget(r)
 
+        # === Device Monitor ===
+        device_monitor_layout = QHBoxLayout()
+        device_monitor_layout.setSpacing(10)
+
+        device_view_range = QLabel("Device View")
+        device_view_range.setStyleSheet("font-weight: bold;")
+        layout.addWidget(device_view_range)
+
+        device_view_range.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred)
+
+        dm_range_label = QLabel("Seconds Ago Axis: ")
+        dm_range_label.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred)
+        self.dm_range_spinbox = QSpinBox()
+        self.dm_range_spinbox.setRange(10, 60)
+        self.dm_range_spinbox.setValue(settings.get("dm_range"))
+        self.dm_range_spinbox.setSuffix(" seconds")
+        self.dm_range_spinbox.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
+        self.dm_range_spinbox.valueChanged.connect(self.on_dm_range_changed)
+
+        device_monitor_layout.addWidget(dm_range_label)
+        device_monitor_layout.addWidget(self.dm_range_spinbox)
+        device_monitor_layout.addStretch()
+
+        layout.addLayout(device_monitor_layout)
+        
         layout.addStretch()
+
 
     def sync_ui_from_settings(self):
         for row in self.rows:
             new_path = settings.get(row.setting_attr)
             row.path_edit.setText(new_path)
+    
+    def on_dm_range_changed(self, value):
+        settings.set("dm_range", value)
+
 
 class SidebarButton(QToolButton):
     def __init__(self, text: str, index: int, icon_path: str = None, parent=None):

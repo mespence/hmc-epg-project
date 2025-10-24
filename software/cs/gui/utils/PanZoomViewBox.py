@@ -229,14 +229,16 @@ class PanZoomViewBox(ViewBox):
         - Change label type submenu
         - Add comment option
 
-        Disabled in live mode.
+        Disabled in live mode and device view mode.
         """
         if self.datawindow is None:
             self.datawindow = self.parentItem().getViewWidget()
 
         live = getattr(self.datawindow, "live_mode", False)
+        device_view = getattr(self.datawindow, "window_type", "") == "device_view"
 
-        if live:
+
+        if live or device_view:
             event.ignore()
             return
         

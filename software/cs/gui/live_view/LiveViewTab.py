@@ -458,9 +458,13 @@ class LiveViewTab(QWidget):
 
         if self.datawindow.isVisible():
             self.datawindow.setVisible(False)
+            self.pause_live_button.setVisible(False)
+            self.add_comment_button.setVisible(False)
             self.devicewindow.setVisible(True)
         else:
             self.datawindow.setVisible(True)
+            self.pause_live_button.setVisible(True)
+            self.add_comment_button.setVisible(True)
             self.devicewindow.setVisible(False)
 
         

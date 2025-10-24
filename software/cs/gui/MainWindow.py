@@ -100,7 +100,7 @@ class MainWindow(QMainWindow):
 
         
         file_menu.addSeparator()
-        file_menu.addAction("Settings", self.open_settings)
+        file_menu.addAction("SCIDO_Settings", self.open_settings)
         file_menu.addSeparator()
         file_menu.addAction("Exit App", self.close)
 
@@ -257,7 +257,8 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event = None):
         label_dw = self.label_tab.datawindow
         live_dw = self.live_view_tab.datawindow
-        bt_io = self.live_view_tab.device_panel.bt_io
+        if os.name == "nt": # restrict to wndows for now, implement bt compatibility with mac later
+            bt_io = self.live_view_tab.device_panel.bt_io
 
         label_view_unsaved = not label_dw.checkForUnsavedChanges()
         live_view_unsaved = live_dw.data_modified
@@ -304,8 +305,9 @@ class MainWindow(QMainWindow):
             live_dw.plot_update_timer.stop()
         if live_dw.save_timer.isActive():
             live_dw.save_timer.stop()
-        if bt_io._thread.isRunning():
-            bt_io.stop()
+        if os.name == "nt": 
+            if bt_io._thread.isRunning():
+                bt_io.stop()
 
 
         if not live_dw.backup_renamed:
