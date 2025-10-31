@@ -25,9 +25,6 @@ class SliderPanel(QWidget):
         super().__init__(parent=parent)
         self.setWindowTitle("Slider Panel")
 
-        #self.socket_client = self.parent().socket_client
-        self._suppress = False  # whether slider signals are suppressed
-
         self._spec = get_spec()
         self.epg_settings = get_state(parent=self)
 

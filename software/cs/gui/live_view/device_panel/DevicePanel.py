@@ -34,7 +34,7 @@ if root_dir not in sys.path:
     sys.path.insert(0, root_dir)
 
 from live_view.BluetoothIO import BluetoothIO
-from live_view.BluetoothState import BluetoothState
+from live_view.device_panel.BluetoothState import BluetoothState
 from utils.SVGIcon import svg_to_colored_pixmap
 
 
