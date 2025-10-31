@@ -68,7 +68,7 @@ class _BluetoothStateWorker(QObject):
         self.stateReady.emit(has_adapter, enabled)
 
 
-class BluetoothState(QObject):
+class BluetoothStateChecker(QObject):
     """
     Manages periodic Bluetooth state checks with a worker thread.
     Emits stateChanged(has_adapter, enabled).

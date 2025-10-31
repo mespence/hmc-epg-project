@@ -7,7 +7,7 @@ from typing import Callable, Optional
 from PyQt6.QtCore import QObject, pyqtSignal, QThread
 
 # ---------- CONFIG ----------
-BLE_ADDRESS = "C2:83:79:F8:C2:86"  # sw team's test board. acutal address will be passed in at runtime
+BLE_ADDRESS = "C2:83:79:F8:C2:86"  # software team's test board. acutal address will be passed in at runtime
 NOTIFY_CHARACTERISTIC_UUID = "445817D2-9E86-1078-1F76-703DC002EF42"
 WRITE_CHARACTERISTIC_UUID  = "445817D2-9E86-1078-1F76-703DC002EF43"  
 MAX_PACKET = 180  # conservative; maybe raise?
@@ -382,10 +382,7 @@ if __name__ == "__main__":
     ble.error.connect(lambda msg: log_and_print(f"[Signal] Error: {msg}"))
 
     ble.start(BLE_ADDRESS)
-
-    # clean stop on exit
-    def on_exit():
-        ble.stop()
-    app.aboutToQuit.connect(on_exit)
+        
+    app.aboutToQuit.connect(ble.stop)
 
     sys.exit(app.exec())

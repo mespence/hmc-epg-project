@@ -14,8 +14,6 @@ import os
 import re
 import sys
 import json
-import shutil
-import subprocess
 from dataclasses import dataclass
 from typing import Optional, List
 
@@ -33,14 +31,13 @@ root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if root_dir not in sys.path:
     sys.path.insert(0, root_dir)
 
-from live_view.BluetoothIO import BluetoothIO
-from live_view.BluetoothState import BluetoothState
+from epg_board.BluetoothIO import BluetoothIO
+from live_view.device_panel.BluetoothStateChecker import BluetoothStateChecker
 from utils.SVGIcon import svg_to_colored_pixmap
 
 
 
 # TODO: consolidate code in DeviceWidget and AddDeviceWidget to reduce code duplication
-
 
 # =========================
 # Utilities & Data Layer
@@ -419,7 +416,7 @@ class DevicePanel(QWidget):
 
         # --- Services ---
         self.store = DeviceStore()
-        self.bt_state = BluetoothState(poll_interval_ms=2000, parent=self)
+        self.bt_state = BluetoothStateChecker(poll_interval_ms=2000, parent=self)
         self.bt_state.stateChanged.connect(self._on_bt_state_changed)
 
         self.bt_io: BluetoothIO = BluetoothIO()
@@ -470,7 +467,7 @@ class DevicePanel(QWidget):
         self.button_container.setFixedHeight(self.open_settings_btn.sizeHint().height())
         button_layout.addWidget(self.open_settings_btn)
         layout.addWidget(self.button_container)
-        self.open_settings_btn.clicked.connect(BluetoothState.open_settings)
+        self.open_settings_btn.clicked.connect(BluetoothStateChecker.open_settings)
 
         hr2 = QFrame(); hr2.setFrameShape(QFrame.Shape.HLine); hr2.setFrameShadow(QFrame.Shadow.Sunken)
         layout.addWidget(hr2)
