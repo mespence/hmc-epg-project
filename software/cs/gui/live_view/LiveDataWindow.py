@@ -44,6 +44,7 @@ class LiveDataWindow(PlotWidget):
         """
         # --- GENERAL INIT ITEMS ---
         super().__init__(parent = parent, viewBox=PanZoomViewBox(datawindow=self))
+        self.setMinimumWidth(300)
 
         self.plot_item: PlotItem = self.getPlotItem()
         self.viewbox: PanZoomViewBox = self.plot_item.getViewBox() # the plotting area (no axes, etc.)
@@ -289,7 +290,7 @@ class LiveDataWindow(PlotWidget):
                     # export_df cancelled by the user, so cancel closing application
                     event.ignore()
                     return
-                self.parent().socket_server.stop()
+                # self.parent().socket_server.stop()
             elif reply == QMessageBox.StandardButton.Cancel:
                 event.ignore()
                 return

@@ -4,7 +4,7 @@ import json
 import time
 import threading
 from queue import Empty
-
+from pathlib import Path
 
 from PyQt6.QtCore import Qt, QSize, QMetaObject, Q_ARG
 from PyQt6.QtGui import QIcon
@@ -13,10 +13,10 @@ from PyQt6.QtWidgets import (
 )
 
 from live_view.LiveDataWindow import LiveDataWindow
-from live_view.SliderPanel import SliderPanel
-from live_view.socket.ConnectionIndicator import ConnectionIndicator
+from live_view.device_panel.DevicePanel import DevicePanel
+from live_view.slider_panel.SliderPanel import SliderPanel
 from live_view.socket.EPGSocket import SocketClient, SocketServer
-from live_view.DevicePanel import DevicePanel
+from epg_board.EPGStateManager import get_spec, get_state
 from utils.ResourcePath import resource_path
 from utils.SVGIcon import svg_to_colored_pixmap
 
@@ -24,8 +24,7 @@ from utils.SVGIcon import svg_to_colored_pixmap
 class LiveViewTab(QWidget):
     def __init__(self, recording_settings = None, parent=None):
         super().__init__(parent)
-        self.connection_indicator = ConnectionIndicator()
-
+    
         self.initial_timestamp: float = None  # unix timestamp of the first data point in a recording
         self.total_pause_time: float = 0  # the cumulative length of any pauses
         self.pause_start_time: float = None # unix timestamp of the most recent pause
@@ -35,15 +34,15 @@ class LiveViewTab(QWidget):
         else:
             self.datawindow = LiveDataWindow(parent=self)
         self.datawindow.getPlotItem().hideButtons()
-   
 
+        self._spec = get_spec()
+        self.epg_settings = get_state(parent=self)  # parent is ignored if already created
 
         # === Socket ===
         self.socket_server = SocketServer()
         self.socket_server.start()
 
         self.socket_client = SocketClient(client_id='CS', parent=self)
-        self.socket_client.peerConnectionChanged.connect(self.connection_indicator.set_connected)
         #self.socket_client.peerConnectionChanged.connect(self.update_button_state)
         self.socket_client.connect()      
 
@@ -170,7 +169,6 @@ class LiveViewTab(QWidget):
             top_controls.addWidget(self.device_button)
 
         top_controls.addStretch()  # push slider button to right
-        top_controls.addWidget(self.connection_indicator)
         top_controls.addWidget(self.slider_button)
 
         top_controls_widget = QWidget()
@@ -206,7 +204,7 @@ class LiveViewTab(QWidget):
         if sys.platform.startswith("win"):
             main_layout.addWidget(self.device_panel, 2)
         main_layout.addLayout(center_layout, 15)
-        main_layout.addWidget(self.slider_panel, 4)
+        main_layout.addWidget(self.slider_panel, 5)
 
         # can't figure out the 2 random tabs --> this logic below doesnt work either
         # self.setTabOrder(self.pause_live_button, self.add_comment_button)
@@ -292,8 +290,8 @@ class LiveViewTab(QWidget):
 
 
     def resume_recording(self):
-        with self.socket_client.recv_queue.mutex:
-            self.socket_client.recv_queue.queue.clear()
+        # with self.socket_client.recv_queue.mutex:
+        #     self.socket_client.recv_queue.queue.clear()
 
         dw = self.datawindow
 
@@ -440,5 +438,3 @@ class LiveViewTab(QWidget):
             Qt.ConnectionType.QueuedConnection,
             Q_ARG(dict, value),
         )
-   
-

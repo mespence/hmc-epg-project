@@ -1,6 +1,6 @@
 # startup_loader.py
 import os
-from PyQt6.QtGui import QFontDatabase
+from PyQt6.QtGui import QFontDatabase, QFont
 from PyQt6.QtWidgets import QApplication
 from LoadingScreen import LoadingScreen
 from utils.ResourcePath import resource_path
@@ -28,6 +28,9 @@ def start_main_application(app_instance, recording_settings = None, file=None, c
     if os.name == "nt":
         setConfigOptions(useOpenGL=True)
 
+    #app_instance.setFont(QFont("Inter", 9))
+    app_instance.setFont(QFont("Segoe UI", 9))
+
     window = MainWindow(recording_settings=recording_settings, file=file, channel_index=channel_index)
 
     window.showMaximized()
@@ -35,6 +38,7 @@ def start_main_application(app_instance, recording_settings = None, file=None, c
     window.activateWindow()
 
     app_instance.processEvents()
+    
     splash.close()
 
     return window

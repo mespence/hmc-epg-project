@@ -25,11 +25,15 @@ class AboutDialog(QDialog):
         info = QLabel(
             "<h2>SCIDO</h2>"
             "<h4>Supervised Classification of Insect Data & Observations</h4>"
+            '<p><a href="https://github.com/mespence/hmc-epg-project/tree/main/software" '
+            'style="color:#2980b9; text-decoration:none;">'
+            'View on GitHub</a></p>'
             "<p><b>Version:</b> 0.1.5<br>"
             "<b>Last Update Release:</b> September 11, 2025<br>"
         )
         info.setAlignment(Qt.AlignmentFlag.AlignCenter)
         info.setWordWrap(True)
+        info.setOpenExternalLinks(True)
         layout.addWidget(info)
 
         # Close button

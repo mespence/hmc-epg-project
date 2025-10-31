@@ -613,7 +613,7 @@ class SettingsWindow(QMainWindow):
             
         button_info = [
             ("Appearance", None),  # Use valid icon paths or leave empty
-            ("EPG Settings", None)
+            ("Recording Settings", None)
         ]
 
         self.buttons = []

@@ -31,8 +31,11 @@ from FileSelector import FileSelector
 from settings.SettingsWindow import SettingsWindow
 
 from live_view.LiveViewTab import LiveViewTab
+from live_view.EPGSettingsMonitorWindow import EPGSettingsMonitorWindow
 from label_view.LabelViewTab import LabelViewTab
 from utils.AboutDialog import AboutDialog
+
+from epg_board.EPGStateManager import get_spec, get_state
 
 
 class MainWindow(QMainWindow):
@@ -41,9 +44,13 @@ class MainWindow(QMainWindow):
     def __init__(self, recording_settings = None, file = None, channel_index = None) -> None:
         if os.name == "nt":  # windows
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
-                "company.app.1"  # needed to set taskbar icon on windows
+                "hmc.scido.1"  # needed to set taskbar icon on windows
             )
         super().__init__()
+
+        # Initialize the single spec/state early with MainWindow as parent
+        _ = get_spec()
+        _ = get_state(parent=self)
 
         self.epgdata = EPGData()
         
@@ -109,8 +116,10 @@ class MainWindow(QMainWindow):
         placeholder.setEnabled(False)
 
         view_menu = QMenu("View", self)
-        placeholder = view_menu.addAction("Nothing here yet!")
-        placeholder.setEnabled(False)
+        self.epg_settings_monitor = EPGSettingsMonitorWindow(state=get_state(), parent=self)
+        self.epg_settings_monitor.hide()
+        self.epg_settings_monitor_entry = view_menu.addAction("EPG Settings", self.open_epg_settings_monitor)
+    
 
 
         help_menu = QMenu("Help", self)
@@ -175,10 +184,15 @@ class MainWindow(QMainWindow):
         self.settings_window.raise_()
         self.settings_window.activateWindow()
 
+    def open_epg_settings_monitor(self):
+        self.epg_settings_monitor.show()
+        self.epg_settings_monitor.raise_()
+        self.epg_settings_monitor.activateWindow()
+
     def open_about(self):
         self.about_window.show()
-        self.settings_window.raise_()
-        self.settings_window.activateWindow()
+        self.about_window.raise_()
+        self.about_window.activateWindow()
 
     def export_comments_from_current_tab(self):
         current_widget = self.tabs.currentWidget()
@@ -227,13 +241,14 @@ class MainWindow(QMainWindow):
         if isinstance(widget, (LiveViewTab, LabelViewTab)):
             widget.datawindow.setFocus()
 
-        # Enable/disable "Open" action
         if isinstance(widget, LiveViewTab):
             self.file_open.setEnabled(False)
             self.export_to_txt.setEnabled(False)
+            self.epg_settings_monitor_entry.setEnabled(True)
         else:
             self.file_open.setEnabled(True)
             self.export_to_txt.setEnabled(True)
+            self.epg_settings_monitor_entry.setEnabled(False)
     
     # def start_labeling(self):
     #     task = LabelingTask(self.labeler, self.epgdata, self.datawindow)
@@ -306,8 +321,8 @@ class MainWindow(QMainWindow):
             live_dw.plot_update_timer.stop()
         if live_dw.save_timer.isActive():
             live_dw.save_timer.stop()
-        if bt_io._thread.isRunning():
-            bt_io.stop()
+            
+        bt_io.stop()
 
 
         if not live_dw.backup_renamed:

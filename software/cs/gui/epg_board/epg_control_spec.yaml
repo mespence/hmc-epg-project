@@ -1,0 +1,336 @@
+# ============================================================
+# Common reusable mappings (default view values <-> control values)
+# Represents affine mappings of the form `default_view = a * control + b`
+# ============================================================
+MAPPINGS:
+  IDENTITY: &MAP_IDENTITY { a: 1.0, b: 0.0, round_to_int: false }
+  # TO_INT:   &MAP_TO_INT   { a: 1.0, b: 0.0, round_to_int: true  }
+
+# ============================================================
+# Engineering (debug) view
+# ============================================================
+ENGINEERING_CONTROL_SPEC:
+  INPUT_RESISTANCE:
+    label: "Input Resistance"
+    unit: "Ω"
+    type: str
+    widget_type: combo_box
+    choices: ["100K", "1M", "10M", "100M", "1G", "10G", "SR", "Loopback"]
+    default_value: "100K"
+
+  PGA_1:
+    label: "PGA 1"
+    unit: ""
+    type: int
+    widget_type: slider
+    min_value: 1
+    max_value: 7
+    default_value: 1
+
+  PGA_2:
+    label: "PGA 2"
+    unit: ""
+    type: int
+    widget_type: slider
+    min_value: 1
+    max_value: 7
+    default_value: 1
+
+  SIGNAL_CHAIN_AMPLIFICATION:
+    label: "Signal Chain Amplification"
+    unit: "×"
+    type: int
+    widget_type: slider
+    min_value: 2
+    max_value: 7000
+    default_value: 2
+
+  SIGNAL_CHAIN_OFFSET:
+    label: "Signal Chain Offset"
+    unit: "V"
+    type: float
+    widget_type: slider
+    min_value: -3.3
+    max_value: 3.3
+    step_size: 0.1
+    decimal_places: 1
+    default_value: 0.6
+
+  DDS_AMPLIFICATION:
+    label: "DDS Amplification"
+    unit: "×"
+    type: float
+    widget_type: slider
+    min_value: -5.00
+    max_value: -0.01
+    step_size: 0.01
+    decimal_places: 2
+    default_value: -1.00
+
+  DDS_OFFSET:
+    label: "DDS Offset"
+    unit: "V"
+    type: float
+    widget_type: slider
+    min_value: -3.3
+    max_value: 3.3
+    step_size: 0.01
+    decimal_places: 2
+    default_value: -0.34
+
+  DIGIPOT_CHANNEL_0:
+    label: "Digipot Ch 0"
+    unit: ""
+    type: int
+    widget_type: slider
+    min_value: 0
+    max_value: 255
+    default_value: 204
+
+  DIGIPOT_CHANNEL_1:
+    label: "Digipot Ch 1"
+    unit: ""
+    type: int
+    widget_type: slider
+    min_value: 0
+    max_value: 127
+    default_value: 127
+
+  DIGIPOT_CHANNEL_2:
+    label: "Digipot Ch 2"
+    unit: ""
+    type: int
+    widget_type: slider
+    min_value: 0
+    max_value: 255
+    default_value: 150
+
+  DIGIPOT_CHANNEL_3:
+    label: "Digipot Ch 3"
+    unit: ""
+    type: int
+    widget_type: slider
+    min_value: 0
+    max_value: 255
+    default_value: 114
+
+  EXCITATION_FREQUENCY:
+    label: "Excitation Frequency"
+    unit: "Hz"
+    type: str
+    widget_type: combo_box
+    choices: ["0", "1", "1000"]
+    default_value: "1000"
+
+# ============================================================
+# Relations between controls (bidirectional dependencies)
+# ============================================================
+ENGINEERING_RELATIONS:
+  # --- SCA from components: pga1, pga2, d1 -> SCA ---
+  - name: sca_from_components
+    triggers: [PGA_1, PGA_2, DIGIPOT_CHANNEL_1]
+    targets:
+      - key: SIGNAL_CHAIN_AMPLIFICATION
+        # SCA = int(PGA1 * gain(PGA2) * 254 / D1), clamped to [2, 7000]
+        formula: >
+          clamp(int(
+            PGA_1 *
+            {1:1, 2:2, 3:5, 4:10, 5:20, 6:50, 7:100}.get(PGA_2, 1)
+            * 254 / DIGIPOT_CHANNEL_1
+          ), 2, 7000)
+
+  # --- components from SCA: SCA -> pga1, pga2, d1 ---
+  - name: components_from_sca
+    triggers: [SIGNAL_CHAIN_AMPLIFICATION]
+    targets:
+      # these formulas must be evaluated sequentially
+      - key: PGA_1
+        # pga1_setting = int(SCA / 2), clamped to [1, 7]
+        formula: "clamp(int(SIGNAL_CHAIN_AMPLIFICATION / 2), 1, 7)"
+
+      - key: PGA_2
+        # Select the largest PGA2 gain tier <= remaining_gain = (SCA / 2) / PGA_1
+        # Gain tiers: {1:1, 2:2, 3:5, 4:10, 5:20, 6:50, 7:100}
+        # Thresholds: >=100->7, >=50->6, >=20->5, >=10->4, >=5->3, >=2->2, else->1
+        formula: |
+          (lambda g, s={100:7,50:6,20:5,10:4,5:3,2:2,1:1}:
+              next(s[k] for k in (100,50,20,10,5,2,1) if g >= k)
+          )((SIGNAL_CHAIN_AMPLIFICATION / 2) / PGA_1)
+
+      - key: DIGIPOT_CHANNEL_1
+        # D1 = int(254 * PGA_1 * gain(PGA_2) / SCA), clamped to [1, 254]
+        formula: |
+          clamp(
+              int(
+                  254 * PGA_1 *
+                  {1:1, 2:2, 3:5, 4:10, 5:20, 6:50, 7:100}[PGA_2] /
+                  SIGNAL_CHAIN_AMPLIFICATION
+              ),
+              1,
+              254
+          )
+
+  # --- SCO <-> D2 ---
+  - name: d2_from_sco
+    triggers: [SIGNAL_CHAIN_OFFSET]
+    targets:
+      - key: DIGIPOT_CHANNEL_2
+        formula: "int((SIGNAL_CHAIN_OFFSET / 3.3 + 1) / 2 * 255)"
+
+  - name: sco_from_d2
+    triggers: [DIGIPOT_CHANNEL_2]
+    targets:
+      - key: SIGNAL_CHAIN_OFFSET
+        formula: "((DIGIPOT_CHANNEL_2 / 255) * 2 - 1) * 3.3"
+
+  # --- DDSO <-> D3 ---
+  - name: d3_from_ddso
+    triggers: [DDS_OFFSET]
+    targets:
+      - key: DIGIPOT_CHANNEL_3
+        formula: "int((DDS_OFFSET / 3.3 + 1) / 2 * 255)"
+
+  - name: ddso_from_d3
+    triggers: [DIGIPOT_CHANNEL_3]
+    targets:
+      - key: DDS_OFFSET
+        formula: "((DIGIPOT_CHANNEL_3 / 255) * 2 - 1) * 3.3"
+
+  # --- DDSA <-> D0 ---
+  - name: d0_from_ddsa
+    triggers: [DDS_AMPLIFICATION]
+    targets:
+      - key: DIGIPOT_CHANNEL_0
+        formula: "int(51 * (DDS_AMPLIFICATION + 5))"
+
+  - name: ddsa_from_d0
+    triggers: [DIGIPOT_CHANNEL_0]
+    targets:
+      - key: DDS_AMPLIFICATION
+        formula: "(DIGIPOT_CHANNEL_0 / 51) - 5"
+
+# ============================================================
+# Engineering control order (UI layout)
+# ============================================================
+ENGINEERING_UI_ORDER:
+  - INPUT_RESISTANCE
+  - PGA_1
+  - PGA_2
+  - SIGNAL_CHAIN_AMPLIFICATION
+  - SIGNAL_CHAIN_OFFSET
+  - DDS_AMPLIFICATION
+  - DDS_OFFSET
+  - DIGIPOT_CHANNEL_0
+  - DIGIPOT_CHANNEL_1
+  - DIGIPOT_CHANNEL_2
+  - DIGIPOT_CHANNEL_3
+  - EXCITATION_FREQUENCY
+
+# ============================================================
+# Entomologist (default) view (simplified)
+# ============================================================
+ENTOMOLOGIST_CONTROL_SPEC:
+  CURRENT_TYPE:
+    type: str
+    widget_type: toggle_switch
+    left_label: "DC"
+    right_label: "AC"
+    disabled_left: false
+    default_value: "AC"
+    on_change: 
+      DC: # when changing to DC
+        set_engineering:
+          EXCITATION_FREQUENCY: "0"
+          DDS_AMPLIFICATION: -1.00 # restore AC default
+        reset_default_controls:
+          - APPLIED_VOLTAGE # let spec handle remaining changes
+      AC: # when changing to AC
+        set_engineering:
+          EXCITATION_FREQUENCY: "1000"
+          DDS_OFFSET: -0.34 # restore DC default
+        reset_default_controls:
+          - APPLIED_VOLTAGE
+
+  APPLIED_VOLTAGE:
+    label: "Applied Voltage"
+    current_types:
+      DC:
+        unit: "mV"
+        type: int
+        widget_type: slider
+        min_value: -3300
+        max_value: 3300
+        step_size: 10
+        decimal_places: 0
+        default_value: 0
+        target:
+          key: DDS_OFFSET
+          mapping: { a: -1000.0, b: 0.0, round_to_int: false }
+
+      AC:
+        unit: "mV RMS"
+        type: int
+        widget_type: slider
+        min_value: 7
+        max_value: 1000
+        default_value: 7
+        target:
+          key: DDS_AMPLIFICATION
+          mapping: { a: -214.6, b: 2.7253 }
+          # # equivalent control via map for D0
+          # key: DIGIPOT_CHANNEL_0   
+          # mapping: { a: -4.207, b: 1075.51, round_to_int: true }
+
+  INPUT_RESISTANCE:
+    label: "Input Resistance"
+    current_types:
+      # same for both current types
+      AC: &INPUT_RESISTANCE_CONFIG
+        unit: "Ω"
+        type: str
+        widget_type: combo_box
+        choices: ["100K", "1M", "10M", "100M", "1G", "10G", "SR", "Loopback"]
+        default_value: "100K"
+        target: { key: INPUT_RESISTANCE }
+      DC: *INPUT_RESISTANCE_CONFIG
+
+  GAIN:
+    label: "Gain"
+    current_types:
+      # same for both current types
+      AC: &GAIN_CONFIG
+        unit: "×"
+        type: int
+        widget_type: slider
+        min_value: 2
+        max_value: 7000
+        default_value: 2
+        target: { key: SIGNAL_CHAIN_AMPLIFICATION, mapping: *MAP_IDENTITY }
+      DC: *GAIN_CONFIG
+
+  OFFSET:
+    label: "Offset"
+    current_types:
+      # same for both current types
+      AC: &OFFSET_CONFIG
+        unit: "V"
+        type: float
+        widget_type: slider
+        min_value: -3.3
+        max_value: 3.3
+        step_size: 0.1
+        decimal_places: 1
+        default_value: 0.0
+        target: { key: SIGNAL_CHAIN_OFFSET, mapping: *MAP_IDENTITY }
+      DC: *OFFSET_CONFIG
+
+# ============================================================
+# Entomologist control order (UI layout)
+# ============================================================
+ENTOMOLOGIST_UI_ORDER:
+  - CURRENT_TYPE
+  - APPLIED_VOLTAGE
+  - INPUT_RESISTANCE
+  - GAIN
+  - OFFSET
+
