@@ -15,7 +15,6 @@ from PyQt6.QtWidgets import (
 from live_view.LiveDataWindow import LiveDataWindow
 from live_view.device_panel.DevicePanel import DevicePanel
 from live_view.slider_panel.SliderPanel import SliderPanel
-from live_view.socket.EPGSocket import SocketClient, SocketServer
 from epg_board.EPGStateManager import get_spec, get_state
 from utils.ResourcePath import resource_path
 from utils.SVGIcon import svg_to_colored_pixmap
@@ -37,17 +36,6 @@ class LiveViewTab(QWidget):
 
         self._spec = get_spec()
         self.epg_settings = get_state(parent=self)  # parent is ignored if already created
-
-        # === Socket ===
-        self.socket_server = SocketServer()
-        self.socket_server.start()
-
-        self.socket_client = SocketClient(client_id='CS', parent=self)
-        #self.socket_client.peerConnectionChanged.connect(self.update_button_state)
-        self.socket_client.connect()      
-
-        self.receive_loop = threading.Thread(target=self._socket_recv_loop, daemon=True)
-        self.receive_loop.start()
 
         
 
@@ -270,7 +258,6 @@ class LiveViewTab(QWidget):
         dw.curve.clear()
         dw.scatter.clear()
         dw.buffer_data.clear()
-        self.socket_client.recv_queue.queue.clear()
 
         self.initial_timestamp = time.time()
         dw.plot_update_timer.start()
@@ -290,9 +277,6 @@ class LiveViewTab(QWidget):
 
 
     def resume_recording(self):
-        # with self.socket_client.recv_queue.mutex:
-        #     self.socket_client.recv_queue.queue.clear()
-
         dw = self.datawindow
 
         if self.pause_start_time is not None:
@@ -322,119 +306,3 @@ class LiveViewTab(QWidget):
         self.slider_panel.start_button.setEnabled(True)
         self.slider_panel.pause_button.setEnabled(False)
         self.slider_panel.stop_button.setEnabled(False)
-
-
-
-    def _socket_recv_loop(self):
-        acknowledged = False # whether the client has been acknowledged by the server
-        while self.socket_client.connected:
-            try:
-                raw_message = self.socket_client.recv_queue.get(timeout=0.01)
-
-                # process server acknowledgement
-                if not acknowledged:
-                    if isinstance(raw_message, str) and raw_message.strip() == "ack":
-                        acknowledged = True 
-                    continue                
-
-            
-                # parse message into individual commands
-                # NOTE: message can include multiple commands/data, i.e. "{<command1>}\n{<command2>}\n"
-                if isinstance(raw_message, dict):
-                    messages = [raw_message]
-                else:
-                    # Multiple newline-separated JSON strings
-                    message_list = raw_message.strip().split("\n")
-                    messages = [
-                        json.loads(s) for s in message_list if s.strip()
-                    ]
-            
-                # delegate message response
-                for message in messages:
-                    if message["source"] == self.socket_client.client_id:
-                        continue # skip messages from this client
-
-                    message_type = message['type']
-
-                    if message_type == 'data':
-                        # skip when not plotting
-                        try:
-                            if not self.datawindow.plot_update_timer.isActive():
-                                continue
-                        except RuntimeError:
-                            break  # app closed
-
-                        result = self.process_data_message(message)
-                        if result is None:
-                            continue
-                    elif message_type == "control":
-                        self.process_control_message(message)
-                    elif message_type == "state_sync":
-                        self.process_state_sync(message)
-                        
-            except Empty:
-                continue  # restart the loop
-
-            except Exception as e:
-                self.datawindow.live_mode = False
-                print("[CS RECIEVE LOOP ERROR]", e)
-
-
-
-    def process_data_message(self, message: str):
-        """
-        Returns `None` if `continue` should be given to the while loop of _socket_recv_loop,
-        returns `True` otherwise.
-        """
-        if self.initial_timestamp is None:
-            return None
-
-        device_time = float(message['value'][0])
-        timestamp = device_time - self.initial_timestamp - self.total_pause_time
-        volt = float(message['value'][1])
-
-        if timestamp < 0 or device_time < self.initial_timestamp:
-            return None # skip stale/negative data (if any)
-
-        with self.datawindow.buffer_lock:
-            self.datawindow.buffer_data.append((round(timestamp, 4), volt))
-            
-        self.datawindow.current_time = timestamp
-        return True
-        
-    
-    def process_control_message(self, message: str):
-        name = message["name"]
-        value = message["value"]
-        source = message.get("source")
-
-        if name == "ddsa": # ignore, use d0 value instead
-            return
-        if name == "d0":
-            name = "ddsa"
-            value = -4.207 * float(value) + 1075.51 # Formula from Pierce
-        if name == "ddso":
-            value = -1*value
-
-
-
-        # Workaround to get set_control_value to run in the GUI thread
-        # Might be cleaner to use signals, but this works for now
-        QMetaObject.invokeMethod(
-            self.slider_panel,
-            "set_control_value",
-            Qt.ConnectionType.QueuedConnection,
-            Q_ARG(str, name),
-            Q_ARG(object, value),
-            Q_ARG(str, source)
-        )
-
-    def process_state_sync(self, message: str):
-        value = message["value"]
-
-        QMetaObject.invokeMethod(
-            self.slider_panel,
-            "set_all_controls",
-            Qt.ConnectionType.QueuedConnection,
-            Q_ARG(dict, value),
-        )
