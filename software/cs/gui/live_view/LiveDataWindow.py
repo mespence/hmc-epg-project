@@ -456,7 +456,7 @@ class LiveDataWindow(PlotWidget):
         self.zoom_level = pix_per_second / default_pix_per_second
 
         # scatter if zoom is greater than 300%
-        self.scatter.setVisible(self.zoom_level >= 3)
+        self.scatter.setVisible(bool(self.zoom_level >= 3))
         if self.scatter.isVisible():
             self.scatter.setData(self.xy_rendered[0], self.xy_rendered[1])
         else:

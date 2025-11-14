@@ -158,18 +158,18 @@ class BLEIOHandler(QObject):
 
     # ---------- Public API (slots) ----------
     @pyqtSlot(str, str, str)
-    def connectTo(self, address: str, notify_uuid: str, write_uuid: str) -> None:
+    def connectTo(self, address: str, notify_uuid: str = None, write_uuid: str = None) -> None:
         """
         Begin (or switch to) a sticky connection to `address`.
         """
         self._target_address = address
-        self._notify_uuid = notify_uuid
-        self._write_uuid = write_uuid
+        # self._notify_uuid = notify_uuid
+        # self._write_uuid = write_uuid
         self._sticky = True
         self._invoke_in_loop(self._connect_sequence, fire_and_forget=True)
 
     @pyqtSlot()
-    def disconnectFrom(self) -> None:
+    def disconnect(self) -> None:
         """User-initiated disconnect."""
         self._sticky = False
         self._invoke_in_loop(self._disconnect_sequence, fire_and_forget=True)
@@ -261,18 +261,27 @@ class BLEIOHandler(QObject):
         await self._cancel_task("_batch_task")
         await self._cancel_task("_throughput_task")
 
+
+
         # Close any existing device
         await self._close_device()
+
+        print(0)
+        print(self._target_address, self._notify_uuid, self._write_uuid)
 
         if not self._target_address or not self._notify_uuid or not self._write_uuid:
             self._emit_error("Cannot connect: no target address or UUIDs set")
             self._set_state(ConnectionState.ERROR)
             return
+        
+        print(1)
 
         addr_snapshot = self._target_address
         self._set_state(ConnectionState.CONNECTING)
 
         ok = await self._one_attempt()
+
+        print(2)
 
         if self._sequence_preempted(addr_snapshot):
             return
@@ -284,13 +293,14 @@ class BLEIOHandler(QObject):
             else:
                 self._set_state(ConnectionState.DISCONNECTED)
             return
-
+        print(3)
         await self._start_batching()
+        print(4)
         if self._enable_throughput and (
             self._throughput_task is None or self._throughput_task.done()
         ):
             self._throughput_task = asyncio.create_task(self._throughput_loop())
-
+        print(5)
         self._set_state(ConnectionState.CONNECTED)
 
     async def _begin_reconnect(self) -> None:
@@ -342,8 +352,8 @@ class BLEIOHandler(QObject):
         self._last_throughput_emit = time.monotonic()
 
         self._target_address = None
-        self._notify_uuid = None
-        self._write_uuid = None
+        # self._notify_uuid = None
+        # self._write_uuid = None
         self._sticky = False
 
         self._set_state(ConnectionState.DISCONNECTED)
@@ -365,6 +375,7 @@ class BLEIOHandler(QObject):
         setattr(self, task_attr, None)
 
     async def _one_attempt(self) -> bool:
+        print("A")
         if not self._target_address or not self._notify_uuid or not self._write_uuid:
             self._emit_error("Missing BLE target address or UUIDs")
             return False
@@ -372,6 +383,7 @@ class BLEIOHandler(QObject):
         addr = self._target_address
         notify_uuid = self._notify_uuid
         write_uuid = self._write_uuid
+
 
         try:
             self._device = BLEDeviceClient(
@@ -383,6 +395,7 @@ class BLEIOHandler(QObject):
             await self._device.connect()
             await self._device.start_notifications(self._on_notify_bytes)
             return True
+        
 
         except (asyncio.TimeoutError, BleakError, RuntimeError) as e:
             self._emit_error(f"BLE connection attempt failed: {e}")
@@ -684,8 +697,8 @@ def main():
         ble.connectTo(BLE_ADDRESS, NOTIFY_CHARACTERISTIC_UUID, WRITE_CHARACTERISTIC_UUID)
 
     def do_disconnect():
-        log_line("[Action] disconnectFrom()")
-        ble.disconnectFrom()
+        log_line("[Action] disconnect()")
+        ble.disconnect()
 
     connect_button.clicked.connect(do_connect)
     disconnect_button.clicked.connect(do_disconnect)

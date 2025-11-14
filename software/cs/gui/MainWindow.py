@@ -274,7 +274,7 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event = None):
         label_dw = self.label_tab.datawindow
         live_dw = self.live_view_tab.datawindow
-        bt_io = self.live_view_tab.device_panel.bt_io
+        ble_io = self.live_view_tab.device_panel.ble_io
 
         label_view_unsaved = not label_dw.checkForUnsavedChanges()
         live_view_unsaved = live_dw.data_modified
@@ -322,7 +322,7 @@ class MainWindow(QMainWindow):
         if live_dw.save_timer.isActive():
             live_dw.save_timer.stop()
             
-        bt_io.stop()
+        ble_io.stop()
 
 
         if not live_dw.backup_renamed:

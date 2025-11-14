@@ -16,6 +16,8 @@ import sys
 import json
 from dataclasses import dataclass
 from typing import Optional, List
+from numpy.typing import NDArray
+
 
 # -------- Optional Windows-only import for radio state --------
 if sys.platform.startswith("win"):
@@ -31,13 +33,10 @@ root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if root_dir not in sys.path:
     sys.path.insert(0, root_dir)
 
-from epg_board.BluetoothIO import BluetoothIO
+from epg_board.bluetooth.BLEIOHandler import BLEIOHandler, ConnectionState
 from live_view.device_panel.BluetoothStateChecker import BluetoothStateChecker
 from utils.SVGIcon import svg_to_colored_pixmap
 
-
-
-# TODO: consolidate code in DeviceWidget and AddDeviceWidget to reduce code duplication
 
 # =========================
 # Utilities & Data Layer
@@ -87,7 +86,44 @@ class DeviceStore:
 # UI Widgets
 # =========================
 
-class DeviceWidget(QWidget):
+class DeviceListEntry(QWidget):
+    " "
+    def __init__(self, parent = None):
+        super().__init__(parent)
+   
+    # ---- Painting & hover ----
+    def enterEvent(self, event):
+        if self.isEnabled():
+            self._hover = True
+            self.update()
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        if self.isEnabled():
+            self._hover = False
+            self.update()
+        super().leaveEvent(event)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        rect = self.rect().adjusted(1, 1, -1, -1)
+        radius = 5
+
+        if not self.isEnabled():
+            brush = QBrush(QColor("#1E1E1E"))
+        elif self._hover:
+            brush = QBrush(QColor("#2F2F2F"))
+        else:
+            brush = QBrush(QColor("#1E1E1E"))
+
+        pen = QPen(QColor("#888888"))
+        painter.setPen(pen)
+        painter.setBrush(brush)
+        painter.drawRoundedRect(rect, radius, radius)
+        super().paintEvent(event)
+
+class DeviceWidget(DeviceListEntry):
     """
     The widget for an entry in the device list. 
     """
@@ -159,39 +195,7 @@ class DeviceWidget(QWidget):
         self.action_forget.triggered.connect(self._confirm_forget)
 
         self._hover = False
-
-    # ---- Painting & hover ----
-    def enterEvent(self, event):
-        if self.isEnabled():
-            self._hover = True
-            self.update()
-        super().enterEvent(event)
-
-    def leaveEvent(self, event):
-        if self.isEnabled():
-            self._hover = False
-            self.update()
-        super().leaveEvent(event)
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        rect = self.rect().adjusted(1, 1, -1, -1)
-        radius = 5
-
-        if not self.isEnabled():
-            brush = QBrush(QColor("#1E1E1E"))
-        elif self._hover:
-            brush = QBrush(QColor("#2F2F2F"))
-        else:
-            brush = QBrush(QColor("#1E1E1E"))
-
-        pen = QPen(QColor("#888888"))
-        painter.setPen(pen)
-        painter.setBrush(brush)
-        painter.drawRoundedRect(rect, radius, radius)
-        super().paintEvent(event)
-
+        
     # ---- Interaction ----
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -246,7 +250,7 @@ class DeviceWidget(QWidget):
             self.forgetRequested.emit(self.mac)
 
 
-class AddDeviceWidget(QWidget):
+class AddDeviceWidget(DeviceListEntry):
     """
     The widget at the bottom of the device list to add a new device.
     """
@@ -274,40 +278,6 @@ class AddDeviceWidget(QWidget):
         layout.addStretch()
 
         self._hover = False
-
-    def setEnabled(self, enabled: bool):
-        super().setEnabled(enabled)
-        color = "#EBEBEB" if enabled else "#777777"
-        self.icon_label.setPixmap(svg_to_colored_pixmap("resources/icons/plus.svg", color, 24))
-
-    def enterEvent(self, event):
-        if self.isEnabled():
-            self._hover = True
-            self.update()
-        super().enterEvent(event)
-
-    def leaveEvent(self, event):
-        if self.isEnabled():
-            self._hover = False
-            self.update()
-        super().leaveEvent(event)
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        rect = self.rect().adjusted(1, 1, -1, -1)
-
-        if not self.isEnabled():
-            brush = QBrush(QColor("#1E1E1E"))
-        elif self._hover:
-            brush = QBrush(QColor("#2F2F2F"))
-        else:
-            brush = QBrush(QColor("#1E1E1E"))
-
-        pen = QPen(QColor("#666666"))
-        painter.setPen(pen)
-        painter.setBrush(brush)
-        painter.drawRoundedRect(rect, 5, 5)
 
     def mousePressEvent(self, event):
         if self.isEnabled() and event.button() == Qt.MouseButton.LeftButton:
@@ -419,23 +389,34 @@ class DevicePanel(QWidget):
         self.bt_state = BluetoothStateChecker(poll_interval_ms=2000, parent=self)
         self.bt_state.stateChanged.connect(self._on_bt_state_changed)
 
-        self.bt_io: BluetoothIO = BluetoothIO()
+        self.ble_io: BLEIOHandler = BLEIOHandler()
+        self.ble_io.start()
         self.connected_address: Optional[str] = None
         self.pending_address: Optional[str] = None
         self.device_connected: bool = False
 
         # Wire BluetoothIO to live buffer
-        def place_line_in_live_buffer(line: str):
+        def place_batch_in_live_buffer(timestamps: NDArray, voltages: NDArray):
             if __name__ == "__main__":
                 return
-            index, voltage = (int(x) for x in line.strip().split(','))
-            self.parent().datawindow.buffer_data.append((index / 1e4, voltage / 1000))
-            self.parent().datawindow.current_time = index / 1e4
+            
+            
+            for data_point in zip(timestamps, voltages):
+                #print((data_point[0] / 1e3, data_point[1] / 1000))
+                self.parent().datawindow.buffer_data.append((data_point[0] / 1e3, data_point[1] / 1000))
 
-        self.bt_io.lineReceived.connect(place_line_in_live_buffer)
-        self.bt_io.connectedChanged.connect(self._on_bt_connected_changed)
-        self.bt_io.reconnectingChanged.connect(self._on_bt_reconnecting_changed)
-        self.bt_io.error.connect(self._on_bt_error)
+                #index, voltage = (int(x) for x in line.strip().split(','))
+            
+                self.parent().datawindow.current_time = data_point[0] / 1e3
+
+        self.ble_io.dataBatchReceived.connect(place_batch_in_live_buffer)
+        self.ble_io.connectionStateChanged.connect(self._on_bt_connected_changed)
+        self.ble_io.errorOccurred.connect(self._on_bt_error)
+
+        #self.ble_io.lineReceived.connect(place_line_in_live_buffer)
+        #self.ble_io.connectedChanged.connect(self._on_bt_connected_changed)
+        #self.ble_io.reconnectingChanged.connect(self._on_bt_reconnecting_changed)
+        
 
         # --- UI ---
         layout = QVBoxLayout()
@@ -566,42 +547,53 @@ class DevicePanel(QWidget):
     def _disconnect_device_clicked(self, device: DeviceWidget):
         if self.device_connected and self.connected_address == device.mac:
             self._set_device_status(device.mac, "Disconnecting...")
-            self.bt_io.stop()
-
+            self.ble_io.disconnect()
     # ---- BluetoothIO state reactions ----
 
-    def _on_bt_connected_changed(self, connected: bool):
+    def _on_bt_connected_changed(self, state: ConnectionState):
+        connected: bool = state == ConnectionState.CONNECTED
         self.device_connected = connected
+
+        print(self.connected_address, state)
+        print(self.pending_address, connected)
+
+    
         if connected:
             new_mac = self.pending_address or self.connected_address
-            if new_mac and self.connected_address and self.connected_address != new_mac:
-                self._set_device_status(self.connected_address, "Disconnected")
+
+            # if new_mac and self.connected_address and self.connected_address != new_mac:
+            #     self._set_device_status(self.connected_address, "Disconnected")
+
             self.connected_address = new_mac
             self.pending_address = None
             if self.connected_address:
-                self._set_device_status(self.connected_address, "Connected")
                 self._clear_other_devices_connected(self.connected_address)
+                self._set_device_status(self.connected_address, state.name.title())
+
         else:
             # If not switching, mark current as disconnected
             if not self.pending_address and self.connected_address:
-                self._set_device_status(self.connected_address, "Disconnected")
+                self._set_device_status(self.connected_address, state.name.title())
+                #self._set_device_status(self.connected_address, "Disconnected")
                 self.connected_address = None
 
-    def _on_bt_reconnecting_changed(self, reconnecting: bool):
-        target_mac = self.connected_address or self.pending_address
-        if reconnecting:
-            self._set_device_status(target_mac, "Reconnecting...")
-        # final status will be set by connectedChanged
 
-    def _on_bt_error(self, err: str):
+    # def _on_bt_reconnecting_changed(self, reconnecting: bool):
+    #     target_mac = self.connected_address or self.pending_address
+    #     if reconnecting:
+    #         self._set_device_status(target_mac, "Reconnecting...")
+    #     # final status will be set by connectedChanged
+
+    def _on_bt_error(self, err: str, code: int):
         mac = self.connected_address or self.pending_address
         if mac:
             self._set_device_status(mac, "Error")
+            print(err)
 
     def _on_bt_state_changed(self, has_adapter: bool, enabled: bool):
         if has_adapter and not enabled:
             try:
-                self.bt_io.stop()
+                self.ble_io.disconnect()
             except Exception:
                 pass
 
@@ -650,25 +642,28 @@ class DevicePanel(QWidget):
             return
 
         previous_mac = self.connected_address if (self.connected_address and self.connected_address != device.mac) else None
-        if previous_mac:
-            self._set_device_status(previous_mac, "Disconnecting...")
+        # if previous_mac:
+        #     self._set_device_status(previous_mac, "Disconnecting...")
 
-        self.bt_io.stop()
-        if previous_mac:
-            self._set_device_status(previous_mac, "Disconnected")
+        # #self.ble_io.disconnect()
+        # if previous_mac:
+        #     self._set_device_status(previous_mac, "Disconnected")
 
         self.connected_address = None
         self.device_connected = False
 
         self.pending_address = device.mac
-        self._set_device_status(self.pending_address, "Connecting...")
-        self.bt_io.start(device.mac)
+        #self._set_device_status(self.pending_address, "Connecting...")
+        self.ble_io.connectTo(device.mac)
+        # self.parent().start_recording()
+        self.parent().datawindow.plot_update_timer.start()
+
 
         print(f"Connecting to device: Name={device.name}, MAC={device.mac}")
 
     def closeEvent(self, event):
         try:
-            self.bt_io.stop()
+            self.ble_io.stop()
         except Exception:
             pass
         try:
