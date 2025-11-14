@@ -1,13 +1,13 @@
-from numpy.typing import NDArray
+import re
+import os
+import sys
+import csv
+import datetime
+import threading
 import numpy as np
 import pandas as pd
 from pandas import DataFrame
-import sys
-import datetime
-import csv
-import os
-import threading
-import re
+from numpy.typing import NDArray
 
 from pyqtgraph import PlotWidget, PlotItem, ScatterPlotItem, PlotDataItem, mkPen, InfiniteLine, TextItem
 

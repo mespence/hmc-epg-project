@@ -1,5 +1,6 @@
 from typing import Any, Dict
 
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QWidget,
     QLabel,
@@ -8,13 +9,14 @@ from PyQt6.QtWidgets import (
     QSpacerItem,
     QSizePolicy,
 )
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QIcon
 
 from epg_board.EPGControlState import EPGControlState, EPGControlKey
 
 
 class EPGSettingsMonitorWindow(QWidget):
+    """
+    Pop-up window to display the ground-truth engineering values of the EPG board controls.
+    """
     def __init__(self, state: EPGControlState, parent: str = None):
         super().__init__(parent=parent)
         self.state: EPGControlState = state

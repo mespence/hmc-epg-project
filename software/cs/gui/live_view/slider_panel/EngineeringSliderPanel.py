@@ -1,19 +1,11 @@
-from dataclasses import dataclass
-from typing import Any, Optional, Callable, Dict
+from typing import Any, Callable, Dict
 
-from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QSizePolicy,
-    QLabel, QComboBox, QSlider, QSpinBox, QDoubleSpinBox
-)
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QLabel, QComboBox
+from PyQt6.QtCore import Qt
 
 from epg_board.SpecLoader import EPGSettingsSpec, EngineeringControl
 from epg_board.EPGControlState import EPGControlState, EPGControlKey
 from .SliderRow import SliderRow
-
-# -----------------------
-# Helper functions/classes
-# -----------------------
 
 
 def _set_combo_text(combo, text: str):

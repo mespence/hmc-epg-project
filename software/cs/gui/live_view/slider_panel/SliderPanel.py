@@ -1,23 +1,18 @@
 import sys
-from enum import Enum
-from dataclasses import dataclass
-from typing import Callable, Any, Dict, Optional
 
 from PyQt6.QtWidgets import (
-    QApplication, QWidget, QLabel, QComboBox, 
-    QSlider, QLineEdit, QPushButton, QVBoxLayout, 
-    QHBoxLayout, QGridLayout, QFrame, QDoubleSpinBox,
-    QSizePolicy, QStackedWidget
+    QApplication,
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QStackedWidget,
 )
-from PyQt6.QtCore import Qt, QTimer, QObject, pyqtSlot, QSignalBlocker
-
+from PyQt6.QtCore import Qt
 
 from epg_board.EPGStateManager import get_spec, get_state
-from epg_board.EPGControlKey import EPGControlKey
 from .DefaultSliderPanel import DefaultSliderPanel
 from .EngineeringSliderPanel import EngineeringSliderPanel
 from utils.ToggleSwitch import ToggleSwitch
-
 
 
 class SliderPanel(QWidget):
@@ -122,7 +117,6 @@ class SliderPanel(QWidget):
         else:
             self.pause_button.setText("PAUSE")
             self.parent().resume_recording()
-
 
 
 if __name__ == "__main__":

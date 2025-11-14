@@ -1,7 +1,14 @@
 from dataclasses import dataclass
 from typing import Any, Optional
 
-from PyQt6.QtWidgets import QWidget, QHBoxLayout, QSlider, QSpinBox, QDoubleSpinBox, QSizePolicy
+from PyQt6.QtWidgets import (
+    QWidget,
+    QHBoxLayout,
+    QSlider,
+    QSpinBox,
+    QDoubleSpinBox,
+    QSizePolicy,
+)
 from PyQt6.QtCore import Qt, pyqtSignal
 
 
@@ -180,4 +187,3 @@ class SliderRow(QWidget):
 
         finally:
             self._updating = False
-

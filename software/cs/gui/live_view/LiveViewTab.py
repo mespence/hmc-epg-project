@@ -1,15 +1,11 @@
-import numpy as np
-import os, sys
-import json
+import sys
 import time
-import threading
-from queue import Empty
-from pathlib import Path
+import numpy as np
 
-from PyQt6.QtCore import Qt, QSize, QMetaObject, Q_ARG
+from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import (
-    QWidget, QPushButton, QToolButton, QHBoxLayout, QVBoxLayout, QLabel
+    QWidget, QPushButton, QToolButton, QHBoxLayout, QVBoxLayout
 )
 
 from live_view.LiveDataWindow import LiveDataWindow
