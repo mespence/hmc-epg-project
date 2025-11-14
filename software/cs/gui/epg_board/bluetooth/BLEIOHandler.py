@@ -26,15 +26,17 @@ try:  # Windows WinRT needs STA when using Bleak in a non-main thread
 except Exception:
     _allow_sta = None
 
-# Enums & Config
+# --- Enums & Config ---
 
 class ConnectionState(enum.Enum):
-    IDLE = 0
-    CONNECTING = 1
-    CONNECTED = 2
-    RECONNECTING = 3
-    DISCONNECTED = 4
-    ERROR = 5
+    IDLE = "Idle"
+    CONNECTING = "Connecting..."
+    CONNECTED = "Connected"
+    RECONNECTING = "Reconnecting..."
+    DISCONNECTING = "Disconnecting..."
+    DISCONNECTED = "Disconnected"
+    ERROR = "Error"
+
 
 class DropPolicy(enum.Enum):
     OLDEST = "oldest"
@@ -44,7 +46,9 @@ class DropPolicy(enum.Enum):
 NOTIFY_CHARACTERISTIC_UUID = "445817D2-9E86-1078-1F76-703DC002EF42"
 WRITE_CHARACTERISTIC_UUID  = "445817D2-9E86-1078-1F76-703DC002EF43"
 
-
+# ============
+# Main class
+# ============
 class BLEIOHandler(QObject):
     """
     Qt-friendly BLE I/O handler.
@@ -261,8 +265,6 @@ class BLEIOHandler(QObject):
         await self._cancel_task("_batch_task")
         await self._cancel_task("_throughput_task")
 
-
-
         # Close any existing device
         await self._close_device()
 
@@ -273,15 +275,11 @@ class BLEIOHandler(QObject):
             self._emit_error("Cannot connect: no target address or UUIDs set")
             self._set_state(ConnectionState.ERROR)
             return
-        
-        print(1)
 
         addr_snapshot = self._target_address
         self._set_state(ConnectionState.CONNECTING)
 
         ok = await self._one_attempt()
-
-        print(2)
 
         if self._sequence_preempted(addr_snapshot):
             return
@@ -293,15 +291,19 @@ class BLEIOHandler(QObject):
             else:
                 self._set_state(ConnectionState.DISCONNECTED)
             return
-        print(3)
+        
         await self._start_batching()
-        print(4)
+
         if self._enable_throughput and (
             self._throughput_task is None or self._throughput_task.done()
         ):
             self._throughput_task = asyncio.create_task(self._throughput_loop())
-        print(5)
+
         self._set_state(ConnectionState.CONNECTED)
+        
+        # Send start messages
+        self.sendCommand("ON", tag="startup-ON")
+        self.sendCommand("START", tag="startup-START")
 
     async def _begin_reconnect(self) -> None:
         if not self._sticky or not self._target_address:
@@ -339,6 +341,8 @@ class BLEIOHandler(QObject):
         await self._disconnect_sequence(reason="Reconnect attempts exhausted")
 
     async def _disconnect_sequence(self, reason: str = "") -> None:
+        self._set_state(ConnectionState.DISCONNECTING)
+
         await self._cancel_task("_reconnect_task")
         await self._cancel_task("_connect_task")
         await self._cancel_task("_batch_task")
@@ -375,7 +379,6 @@ class BLEIOHandler(QObject):
         setattr(self, task_attr, None)
 
     async def _one_attempt(self) -> bool:
-        print("A")
         if not self._target_address or not self._notify_uuid or not self._write_uuid:
             self._emit_error("Missing BLE target address or UUIDs")
             return False
@@ -592,7 +595,6 @@ class BLEIOHandler(QObject):
 
             case _:
                 return None
-
 
 
 # ---------- Tester window ----------
