@@ -272,6 +272,7 @@ class MainWindow(QMainWindow):
         self.slider_panel.setVisible(not is_visible)
 
     def closeEvent(self, event = None):
+        
         label_dw = self.label_tab.datawindow
         live_dw = self.live_view_tab.datawindow
         ble_io = self.live_view_tab.device_panel.ble_io
@@ -279,52 +280,29 @@ class MainWindow(QMainWindow):
         label_view_unsaved = not label_dw.checkForUnsavedChanges()
         live_view_unsaved = live_dw.data_modified
 
-        def confirm_exit_box(tab_name: str):
-            msg_box = QMessageBox(self)
-            msg_box.setWindowTitle("SCIDO - Confirm Exit")
-            msg_box.setIcon(QMessageBox.Icon.Warning)
-            msg_box.setText(f'<b>Do you want to save changes to the <u>{tab_name}</u> before closing?</b>')
-            msg_box.setInformativeText("Your changes will be lost if you don't save them.")
-
-            save_btn = QPushButton("Save")
-            dont_save_btn = QPushButton("Don't save")
-            cancel_btn = QPushButton("Cancel")
-
-            save_btn.setStyleSheet("font-weight: bold;")
-
-            msg_box.addButton(save_btn, QMessageBox.ButtonRole.AcceptRole)
-            msg_box.addButton(dont_save_btn, QMessageBox.ButtonRole.DestructiveRole)
-            msg_box.addButton(cancel_btn, QMessageBox.ButtonRole.RejectRole)
-            msg_box.setDefaultButton(save_btn)
-
-            reply = msg_box.exec()
-
-            if msg_box.clickedButton() == save_btn:
-                export_successful = label_dw.export_df() 
-                if not export_successful:
-                    # export_df cancelled by the user, so cancel closing application
-                    event.ignore()
-                    return
-            elif msg_box.clickedButton() == dont_save_btn:
-                pass # proceed with closing w/o save
-            else:
-                event.ignore()
-                return
 
         if label_view_unsaved:
-            confirm_exit_box("Label View")
+            ok = self._confirm_exit_box("Label View", label_dw.export_df)
+            if not ok:
+                event.ignore()
+                return
         if live_view_unsaved:
-            confirm_exit_box("LIve View")
+            ok = self._confirm_exit_box("Live View", live_dw.export_df)
+            if not ok:
+                event.ignore()
+                return
+      
   
-           
+        # --- Live view timers ---  
         if live_dw.plot_update_timer.isActive():
             live_dw.plot_update_timer.stop()
         if live_dw.save_timer.isActive():
             live_dw.save_timer.stop()
-            
+        
+        # --- Stop BLE ---
         ble_io.stop()
 
-
+        # --- Live view backups ---
         if not live_dw.backup_renamed:
             # store the active filenames, updated after each save with utc time stamp
             
@@ -355,6 +333,36 @@ class MainWindow(QMainWindow):
         
         settings.save_all()
         super().closeEvent(event)
+
+    def _confirm_exit_box(self, tab_name: str, save_callable) -> bool:
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle("SCIDO - Confirm Exit")
+        msg_box.setIcon(QMessageBox.Icon.Warning)
+        msg_box.setText(
+            f'<b>Do you want to save changes to the <u>{tab_name}</u> before closing?</b>'
+        )
+        msg_box.setInformativeText("Your changes will be lost if you don't save them.")
+
+        save_btn = QPushButton("Save")
+        dont_save_btn = QPushButton("Don't save")
+        cancel_btn = QPushButton("Cancel")
+        save_btn.setStyleSheet("font-weight: bold;")
+
+        msg_box.addButton(save_btn, QMessageBox.ButtonRole.AcceptRole)
+        msg_box.addButton(dont_save_btn, QMessageBox.ButtonRole.DestructiveRole)
+        msg_box.addButton(cancel_btn, QMessageBox.ButtonRole.RejectRole)
+        msg_box.setDefaultButton(save_btn)
+
+        msg_box.exec()
+        clicked = msg_box.clickedButton()
+
+        if clicked is save_btn:
+            export_successful = save_callable()
+            return bool(export_successful)
+        elif clicked is dont_save_btn:
+            return True 
+        else:
+            return False
 
 
 
