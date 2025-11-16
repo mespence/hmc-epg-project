@@ -14,10 +14,9 @@ class Timeouts:
 
 class BLEDeviceClient:
     """
-    Thin async wrapper around BleakClient. 
+    Async wrapper around BleakClient. 
     Call from within an asyncio event loop (the BLE worker loop).
     """
-
     def __init__(
         self,
         address: str,
@@ -104,4 +103,3 @@ class BLEDeviceClient:
                 await client.disconnect()
         except Exception:
             pass
-

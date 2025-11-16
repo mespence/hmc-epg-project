@@ -188,13 +188,8 @@ class DevicePanel(QWidget):
     def _save_devices(self):
         self.store.save(self._current_devices())
 
-    def _find_device_widget(self, mac: Optional[str]) -> Optional[DeviceWidget]:
-        if not mac:
-            return None
-        return self._device_widgets.get(mac)
-
     def _set_device_status(self, mac: Optional[str], status: str):
-        dev = self._find_device_widget(mac)
+        dev = self._device_widgets.get(mac)
         if dev is not None:
             dev.set_status(status)
             dev.update()
@@ -272,7 +267,6 @@ class DevicePanel(QWidget):
         print(self.connected_address, state)
         print(self.pending_address, connected)
 
-    
         if connected:
             new_mac = self.pending_address or self.connected_address
 

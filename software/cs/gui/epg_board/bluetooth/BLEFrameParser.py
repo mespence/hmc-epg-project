@@ -20,7 +20,6 @@ class BLEFrameParser:
     lines, and classifies each line as a DataFrame (timestamp, mV) or 
     a ManagementFrame (everything else).
     """
-
     def __init__(self, *, line_separator: bytes = b"\r\n") -> None:
         self._buffer = bytearray()
         self._separator = line_separator

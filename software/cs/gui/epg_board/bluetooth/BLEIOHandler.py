@@ -85,8 +85,8 @@ class BLEIOHandler(QObject):
 
         # Tunables
         self._batch_interval_ms = int(batch_interval_ms)             # time (in ms) between data batch emissions
-        self._drop_policy = drop_policy                              # how data should be dropped if the buffer fills
-        self._max_buffer_seconds = float(max_buffer_seconds)         # the maximum amount of time between 
+        self._drop_policy = drop_policy                              # how data should be dropped if the buffer becomes full
+        self._max_buffer_seconds = float(max_buffer_seconds)         # the maximum amount of time kept in the buffer 
         self._timeouts = timeouts                                    # the timeouts (in sec) of the connect sequence
         self._reconnect_backoff = list(reconnect_backoff_s)          # the backoff (in sec) for auto-reconnection
         self._enable_throughput = bool(enable_throughput_telemetry)  # whether data throughput should be calculated
@@ -140,7 +140,7 @@ class BLEIOHandler(QObject):
             if _allow_sta is not None:
                 _allow_sta()
         except Exception as e:
-            print(f"[BLEIOHandler] Warning: allow_sta() failed: {e}")
+            print(f"[BLE] Warning: allow_sta() failed: {e}")
 
         self._loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self._loop)
@@ -178,27 +178,18 @@ class BLEIOHandler(QObject):
         self._sticky = False
         self._invoke_in_loop(self._disconnect_sequence, fire_and_forget=True)
 
-    @pyqtSlot()
-    def startStream(self) -> None:
-        """Optional helper for firmware that needs a start command."""
-        # Example: self.sendCommand("START")
-        pass
-
-    @pyqtSlot()
-    def stopStream(self) -> None:
-        """Optional helper for firmware that needs a stop command."""
-        # Example: self.sendCommand("STOP")
-        pass
-
     @pyqtSlot(str, str)
-    def sendCommand(self, text: str, tag: str = "") -> None:
+    def sendCommand(self, msg: str | EPGControlKey, val = None, tag: str = "") -> None:
         """
         Send a UTF-8 command with NUL terminator.
         """
+        if isinstance(msg, EPGControlKey):
+            msg = self.write_command_from_key(msg, val)
+
         nowait = not self._default_write_sync
         self._invoke_in_loop(
             self._send_command_async,
-            args=(text, nowait, tag),
+            args=(msg, nowait, tag),
             fire_and_forget=True,
         )
 
@@ -211,7 +202,7 @@ class BLEIOHandler(QObject):
         try:
             self._drop_policy = DropPolicy(policy)
         except Exception:
-            print(f"[BLEIOHandler] Invalid drop policy '{policy}', defaulting to OLDEST")
+            print(f"[BLE] Invalid drop policy '{policy}', defaulting to OLDEST")
             self._drop_policy = DropPolicy.OLDEST
 
     @pyqtSlot(float)
@@ -233,13 +224,13 @@ class BLEIOHandler(QObject):
         if self._loop is None:
             return
         try:
-            fut = asyncio.run_coroutine_threadsafe(coro_func(*args), self._loop)
+            future = asyncio.run_coroutine_threadsafe(coro_func(*args), self._loop)
         except RuntimeError as e:
-            print(f"[BLEIOHandler] _invoke_in_loop failed: {e}")
+            print(f"[BLE] _invoke_in_loop failed: {e}")
             return
         if fire_and_forget:
             return
-        return fut
+        return future
 
     # ---------- State helpers ----------
 
@@ -268,8 +259,7 @@ class BLEIOHandler(QObject):
         # Close any existing device
         await self._close_device()
 
-        print(0)
-        print(self._target_address, self._notify_uuid, self._write_uuid)
+        print(f"Connecting to: {self._target_address}")
 
         if not self._target_address or not self._notify_uuid or not self._write_uuid:
             self._emit_error("Cannot connect: no target address or UUIDs set")
@@ -356,8 +346,6 @@ class BLEIOHandler(QObject):
         self._last_throughput_emit = time.monotonic()
 
         self._target_address = None
-        # self._notify_uuid = None
-        # self._write_uuid = None
         self._sticky = False
 
         self._set_state(ConnectionState.DISCONNECTED)
@@ -382,23 +370,17 @@ class BLEIOHandler(QObject):
         if not self._target_address or not self._notify_uuid or not self._write_uuid:
             self._emit_error("Missing BLE target address or UUIDs")
             return False
-
-        addr = self._target_address
-        notify_uuid = self._notify_uuid
-        write_uuid = self._write_uuid
-
-
+        
         try:
             self._device = BLEDeviceClient(
-                addr,
-                notify_uuid=notify_uuid,
-                write_uuid=write_uuid,
+                self._target_address,
+                notify_uuid=self._notify_uuid,
+                write_uuid=self._write_uuid,
                 timeouts=self._timeouts,
             )
             await self._device.connect()
             await self._device.start_notifications(self._on_notify_bytes)
             return True
-        
 
         except (asyncio.TimeoutError, BleakError, RuntimeError) as e:
             self._emit_error(f"BLE connection attempt failed: {e}")
@@ -428,12 +410,12 @@ class BLEIOHandler(QObject):
             return
         try:
             await dev.stop_notifications()
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[BLE] Error on stop_notifications: {e}")
         try:
             await dev.disconnect()
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[BLE] Error on disconnect: {e}")
 
     # ---------- Notification path & batching ----------
 
@@ -473,10 +455,9 @@ class BLEIOHandler(QObject):
                 if not data_frames:
                     continue
 
-                # Apply backpressure based on timestamps
                 ts_list = [f.timestamp_ms for f in data_frames]
                 v_list = [f.millivolts for f in data_frames]
-                self._apply_backpressure_if_needed(ts_list, v_list)
+                self._apply_backpressure_if_needed(ts_list, v_list) # TODO: look into this once we get 10 kHz
                 if not ts_list:
                     continue
 
@@ -595,130 +576,3 @@ class BLEIOHandler(QObject):
 
             case _:
                 return None
-
-
-# ---------- Tester window ----------
-def main():
-    from PyQt6.QtWidgets import (
-        QApplication,
-        QMainWindow,
-        QWidget,
-        QVBoxLayout,
-        QTextEdit,
-        QLabel,
-        QPushButton,
-    )
-    from PyQt6.QtCore import Qt
-
-    BLE_ADDRESS = "C2:83:79:F8:C2:86" # CS's test nRF board
-
-    app = QApplication(sys.argv)
-
-    win = QMainWindow()
-    central = QWidget()
-    layout = QVBoxLayout(central)
-
-    status_label = QLabel("Status: disconnected")
-    status_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
-
-    throughput_label = QLabel("Throughput: — samples/s")
-    throughput_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
-
-    log = QTextEdit()
-    log.setReadOnly(True)
-
-    connect_button = QPushButton(f"Connect to {BLE_ADDRESS}")
-    disconnect_button = QPushButton("Disconnect")
-    disconnect_button.setEnabled(False)
-
-    layout.addWidget(status_label)
-    layout.addWidget(throughput_label)
-    layout.addWidget(connect_button)
-    layout.addWidget(disconnect_button)
-    layout.addWidget(log)
-
-    win.setCentralWidget(central)
-    win.resize(700, 400)
-    win.setWindowTitle("BLEIOHandler tester")
-    win.show()
-
-    ble = BLEIOHandler(
-        batch_interval_ms=50,
-        max_buffer_seconds=2.0,
-        enable_throughput_telemetry=True,
-    )
-    ble.start()
-
-    def log_line(msg: str) -> None:
-        log.append(msg)
-
-    def on_connection_state(state: ConnectionState) -> None:
-        status_label.setText(f"Status: {state.name}")
-        if state == ConnectionState.CONNECTED:
-            connect_button.setEnabled(False)
-            disconnect_button.setEnabled(True)
-        else:
-            connect_button.setEnabled(True)
-            disconnect_button.setEnabled(False)
-        log_line(f"[Signal] connectionStateChanged: {state.name}")
-
-    def on_error(message: str, code: int) -> None:
-        log_line(f"[Signal] errorOccurred (code={code}): {message}")
-
-    def on_data_batch(timestamps: object, voltages: object) -> None:
-        ts = np.asarray(timestamps)
-        vv = np.asarray(voltages)
-        n = len(ts)
-        if n == 0:
-            return
-        log_line(
-            f"[Signal] dataBatchReceived: {n} samples, "
-            f"t=[{int(ts[0])} .. {int(ts[-1])}] ms, "
-            f"v=[{int(vv[0])} .. {int(vv[-1])}] mV"
-        )
-
-    def on_throughput(sps: float) -> None:
-        throughput_label.setText(f"Throughput: {sps:.1f} samples/s")
-
-    def on_write_completed(ok: bool, tag: str) -> None:
-        log_line(f"[Signal] writeCompleted(tag='{tag}'): ok={ok}")
-
-    def on_mgmt_frames(frames: object) -> None:
-        for line in frames:
-            log_line(f"[Mgmt] {line}")
-
-    ble.connectionStateChanged.connect(on_connection_state)
-    ble.errorOccurred.connect(on_error)
-    ble.dataBatchReceived.connect(on_data_batch)
-    ble.throughputUpdated.connect(on_throughput)
-    ble.writeCompleted.connect(on_write_completed)
-    ble.managementFramesReceived.connect(on_mgmt_frames)
-
-    def do_connect():
-        log_line(f"[Action] connectTo({BLE_ADDRESS})")
-        ble.connectTo(BLE_ADDRESS, NOTIFY_CHARACTERISTIC_UUID, WRITE_CHARACTERISTIC_UUID)
-
-    def do_disconnect():
-        log_line("[Action] disconnect()")
-        ble.disconnect()
-
-    connect_button.clicked.connect(do_connect)
-    disconnect_button.clicked.connect(do_disconnect)
-
-    def send_start_when_connected(state: ConnectionState):
-        if state == ConnectionState.CONNECTED:
-            ble.sendCommand("ON", tag="startup-ON")
-            ble.sendCommand("START", tag="startup-START")
-
-    ble.connectionStateChanged.connect(send_start_when_connected)
-
-    def on_about_to_quit():
-        log_line("[Action] app.aboutToQuit -> ble.stop()")
-        ble.stop()
-
-    app.aboutToQuit.connect(on_about_to_quit)
-    sys.exit(app.exec())
-
-
-if __name__ == "__main__":
-    main()
