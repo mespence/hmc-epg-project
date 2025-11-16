@@ -2,8 +2,8 @@ from typing import Any,  Dict
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from .EPGControlKey import EPGControlKey
-from .SpecLoader import EPGSettingsSpec
+from epg_board.EPGControlKey import EPGControlKey
+from epg_board.SpecLoader import EPGSettingsSpec
 
 
 class EPGControlState(QObject):

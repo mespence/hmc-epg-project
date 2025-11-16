@@ -2,8 +2,8 @@ from typing import Any, Dict
 
 from PyQt6.QtCore import QObject
 
-from .SpecLoader import EPGSettingsSpec
-from .EPGControlState import EPGControlState, EPGControlKey
+from epg_board.SpecLoader import EPGSettingsSpec
+from epg_board.EPGControlState import EPGControlState, EPGControlKey
 
 def clamp(x: float, low: float, high: float) -> float:
     """Clamp a numeric value between given lower and upper bounds."""

@@ -18,24 +18,14 @@ from PyQt6.QtWidgets import (
     QMessageBox,
 )
 
-# -------- Optional Windows-only import for radio state --------
-if sys.platform.startswith("win"):
-    try:
-        from winrt.windows.devices import radios
-    except Exception:
-        radios = None
-else:
-    radios = None
-
-# -------- Project imports --------
-root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if root_dir not in sys.path:
-    sys.path.insert(0, root_dir)
+if __name__ == "__main__":
+    root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..\\.."))
+    if root_dir not in sys.path:
+        sys.path.insert(0, root_dir)
 
 from epg_board.bluetooth.BLEIOHandler import BLEIOHandler, ConnectionState
 from live_view.device_panel.DevicePanelWidgets import DeviceWidget, AddDeviceWidget 
 from live_view.device_panel.BluetoothStateChecker import BluetoothStateChecker
-
 
 # =========================
 # Utilities & Data Layer

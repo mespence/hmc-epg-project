@@ -10,8 +10,8 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 
 from epg_board.EPGStateManager import get_spec, get_state
-from .DefaultSliderPanel import DefaultSliderPanel
-from .EngineeringSliderPanel import EngineeringSliderPanel
+from live_view.slider_panel.DefaultSliderPanel import DefaultSliderPanel
+from live_view.slider_panel.EngineeringSliderPanel import EngineeringSliderPanel
 from utils.ToggleSwitch import ToggleSwitch
 
 

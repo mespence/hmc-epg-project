@@ -1,17 +1,17 @@
+import os
+import sys
+import yaml
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Literal, Optional, Type, Union
 from pathlib import Path
 
-import os
-import sys
-import yaml
+if __name__ == "__main__":
+    root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    if root_dir not in sys.path:
+        sys.path.insert(0, root_dir)
 
-root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if root_dir not in sys.path:
-    sys.path.insert(0, root_dir)
-
-from .EPGControlKey import EPGControlKey
-from .CurrentType import CurrentType
+from epg_board.EPGControlKey import EPGControlKey
+from epg_board.CurrentType import CurrentType
 
 
 # ===== DATACLASSES =====
@@ -368,13 +368,8 @@ def load_spec(path_or_str: Union[str, Path]) -> EPGSettingsSpec:
 if __name__ == "__main__":
     import os
     import sys
-    from pprint import *
+    import pprint
 
-    root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    if root_dir not in sys.path:
-        sys.path.insert(0, root_dir)
-
-
-    spec = load_spec(root_dir + r"\epg_board\epg_control_spec.yaml")
-    pprint(spec.engineering_relations)
+    spec = load_spec(root_dir + r"\epg_board\DR3ControlSpec.yaml")
+    pprint.ppprint(spec.engineering_relations)
 

@@ -10,9 +10,9 @@ from pathlib import Path
 from typing import Optional
 from PyQt6.QtCore import QObject
 
-from .SpecLoader import load_spec
-from .EPGControlState import EPGControlState
-from .RelationsEngine import RelationsEngine
+from epg_board.SpecLoader import load_spec
+from epg_board.EPGControlState import EPGControlState
+from epg_board.RelationsEngine import RelationsEngine
 
 _SPEC = None
 _STATE: Optional[EPGControlState] = None
@@ -22,7 +22,7 @@ def get_spec():
     """Return the single app-wide `EPGSettingsSpec` (created on first call)."""
     global _SPEC
     if _SPEC is None:
-        spec_path = Path(__file__).with_name("epg_control_spec.yaml")
+        spec_path = Path(__file__).with_name("DR3ControlSpec.yaml")
         _SPEC = load_spec(spec_path)
     return _SPEC
 

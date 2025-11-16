@@ -7,7 +7,7 @@ from epg_board.SpecLoader import EPGSettingsSpec, DefaultControl, DefaultCurrent
 from epg_board.EPGControlState import EPGControlState
 from epg_board.EPGControlKey import EPGControlKey
 from epg_board.CurrentType import CurrentType
-from .SliderRow import SliderRow, SliderSpec
+from live_view.slider_panel.SliderRow import SliderRow, SliderSpec
 from utils.ToggleSwitch import ToggleSwitch
 
 # -----------------------

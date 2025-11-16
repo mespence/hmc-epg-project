@@ -7,16 +7,16 @@
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, Optional
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QHBoxLayout, QVBoxLayout, QGroupBox
 )
 
-root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if root_dir not in sys.path:
-    sys.path.insert(0, root_dir)
+if __name__ == "__main__":
+    root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    if root_dir not in sys.path:
+        sys.path.insert(0, root_dir)
 
 from epg_board.SpecLoader import load_spec, EPGSettingsSpec
 from epg_board.EPGControlState import EPGControlState
@@ -62,7 +62,7 @@ class SpecTester(QWidget):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
-    spec_path = Path(__file__).resolve().parent / "epg_control_spec.yaml"
+    spec_path = Path(__file__).resolve().parent / "DR3ControlSpec.yaml"
     spec = load_spec(str(spec_path))
     state = EPGControlState(spec)
 

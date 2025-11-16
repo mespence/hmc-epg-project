@@ -5,7 +5,7 @@ from PyQt6.QtCore import Qt
 
 from epg_board.SpecLoader import EPGSettingsSpec, EngineeringControl
 from epg_board.EPGControlState import EPGControlState, EPGControlKey
-from .SliderRow import SliderRow
+from live_view.slider_panel.SliderRow import SliderRow
 
 
 def _set_combo_text(combo, text: str):

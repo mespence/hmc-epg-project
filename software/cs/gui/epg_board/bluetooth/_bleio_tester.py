@@ -1,14 +1,16 @@
-import sys
 import os
+import sys
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget,
     QVBoxLayout, QTextEdit, QLabel, QPushButton,
 )
 
-root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if root_dir not in sys.path:
-    sys.path.insert(0, root_dir)
+if __name__ == "__main__":
+    root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    if root_dir not in sys.path:
+        sys.path.insert(0, root_dir)
 
 from bluetooth.BLEIOHandler import BLEIOHandler, ConnectionState
 

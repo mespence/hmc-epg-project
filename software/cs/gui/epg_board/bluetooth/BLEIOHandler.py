@@ -1,22 +1,16 @@
-import os
 import sys
 import asyncio
 import enum
 import time
-from dataclasses import dataclass
 from typing import Optional, Any, List, Tuple, Callable
 
 import numpy as np
 from bleak import BleakError
 from PyQt6.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
 
-root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if root_dir not in sys.path:
-    sys.path.insert(0, root_dir)
-
-from EPGControlKey import EPGControlKey
-from bluetooth.BLEDeviceClient import BLEDeviceClient, Timeouts
-from bluetooth.BLEFrameParser import BLEFrameParser
+from epg_board.EPGControlKey import EPGControlKey
+from epg_board.bluetooth.BLEDeviceClient import BLEDeviceClient, Timeouts
+from epg_board.bluetooth.BLEFrameParser import BLEFrameParser
 
 try:  # Windows WinRT needs STA when using Bleak in a non-main thread
     if sys.platform.startswith("win"):
