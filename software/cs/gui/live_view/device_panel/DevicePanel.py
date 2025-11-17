@@ -88,12 +88,9 @@ class DevicePanel(QWidget):
         self.bt_state.stateChanged.connect(self._on_bt_state_changed)
 
         self.ble_io: BLEIOHandler = BLEIOHandler()
-        self.ble_io.start()
-        self.connected_address: Optional[str] = None
-        self.pending_address: Optional[str] = None
-        self.device_connected: bool = False
+        self.ble_io.start() 
 
-        # Wire BluetoothIO to live buffer
+        # Wire BLE to live buffer
         def place_batch_in_live_buffer(timestamps: NDArray, voltages: NDArray):
             if __name__ == "__main__":
                 return
@@ -105,6 +102,8 @@ class DevicePanel(QWidget):
         self.ble_io.dataBatchReceived.connect(place_batch_in_live_buffer)
         self.ble_io.connectionStateChanged.connect(self._on_bt_connected_changed)
         self.ble_io.errorOccurred.connect(self._on_bt_error)
+
+        self._target_device: Optional[DeviceWidget] = None
 
         # --- UI ---
         layout = QVBoxLayout()
@@ -133,13 +132,14 @@ class DevicePanel(QWidget):
         button_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         self.open_settings_btn = QPushButton("  Open Bluetooth Settings  ")
         self.open_settings_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+       
         self.button_container.setFixedHeight(self.open_settings_btn.sizeHint().height())
         button_layout.addWidget(self.open_settings_btn)
         layout.addWidget(self.button_container)
         self.open_settings_btn.clicked.connect(BluetoothStateChecker.open_settings)
 
-        hr2 = QFrame(); hr2.setFrameShape(QFrame.Shape.HLine); hr2.setFrameShadow(QFrame.Shadow.Sunken)
-        layout.addWidget(hr2)
+        hr = QFrame(); hr.setFrameShape(QFrame.Shape.HLine); hr.setFrameShadow(QFrame.Shadow.Sunken)
+        layout.addWidget(hr)
 
         self.device_section = QWidget()
         device_section_layout = QVBoxLayout(self.device_section)
@@ -184,11 +184,11 @@ class DevicePanel(QWidget):
             dev.set_status(status)
             dev.update()
     
-    def _on_mac_edited(self, old_mac: str, widget: DeviceWidget):
+    def _on_mac_edited(self, old_mac: str, device: DeviceWidget):
         if old_mac in self._device_widgets:
             self._device_widgets.pop(old_mac, None)
 
-        self._device_widgets[widget.mac] = widget
+        self._device_widgets[device.mac] = device
         self._save_devices()
 
     def _clear_other_devices_connected(self, keep_mac: Optional[str]):
@@ -202,15 +202,9 @@ class DevicePanel(QWidget):
         dev = DeviceWidget(mac=mac, name=name, status="Disconnected")
         dev.forgetRequested.connect(self._remove_device)
         dev.editRequested.connect(lambda _m: self._save_devices())
-        dev.macEditRequested.connect(
-            lambda old_mac, w=dev: self._on_mac_edited(old_mac, w)
-        )
-        dev.disconnectRequested.connect(
-            lambda _m, w=dev: self._disconnect_device_clicked(w)
-        )
-        dev.connectRequested.connect(
-            lambda _m, w=dev: self._on_device_clicked(w)
-        )
+        dev.macEditRequested.connect(lambda old_mac, d=dev: self._on_mac_edited(old_mac, d))
+        dev.disconnectRequested.connect(lambda _m, d=dev: self._disconnect_device_clicked(d))
+        dev.connectRequested.connect(lambda _m, d=dev: self._on_device_clicked(d))
         self.device_layout.addWidget(dev)
         self._device_widgets[mac] = dev
 
@@ -245,121 +239,66 @@ class DevicePanel(QWidget):
         self._save_devices()
 
     def _disconnect_device_clicked(self, device: DeviceWidget):
-        if self.device_connected and self.connected_address == device.mac:
-            self._set_device_status(device.mac, "Disconnecting...")
+        if self._target_device and self._target_device.mac == device.mac:
             self.ble_io.disconnect()
 
     # ---- BluetoothIO state reactions ----
     def _on_bt_connected_changed(self, state: ConnectionState):
-        connected: bool = state == ConnectionState.CONNECTED
-        self.device_connected = connected
-
-        print(self.connected_address, state)
-        print(self.pending_address, connected)
-
-        if connected:
-            new_mac = self.pending_address or self.connected_address
-
-            # if new_mac and self.connected_address and self.connected_address != new_mac:
-            #     self._set_device_status(self.connected_address, "Disconnected")
-
-            self.connected_address = new_mac
-            self.pending_address = None
-            if self.connected_address:
-                self._clear_other_devices_connected(self.connected_address)
-                self._set_device_status(self.connected_address, state.name.title())
-
-        else:
-            # If not switching, mark current as disconnected
-            if not self.pending_address and self.connected_address:
-                self._set_device_status(self.connected_address, state.name.title())
-                #self._set_device_status(self.connected_address, "Disconnected")
-                self.connected_address = None
-
-
-    # def _on_bt_reconnecting_changed(self, reconnecting: bool):
-    #     target_mac = self.connected_address or self.pending_address
-    #     if reconnecting:
-    #         self._set_device_status(target_mac, "Reconnecting...")
-    #     # final status will be set by connectedChanged
+        self._target_device.set_status(state.value)
+        self._target_device.update()
 
     def _on_bt_error(self, err: str, code: int):
-        mac = self.connected_address or self.pending_address
-        if mac:
-            self._set_device_status(mac, "Error")
-            print(err)
+        print(err) # TODO: make this more informative to the user
 
     def _on_bt_state_changed(self, has_adapter: bool, enabled: bool):
         if has_adapter and not enabled:
-            try:
-                if self.connected_address:
-                    self.ble_io.disconnect()
-            except Exception:
-                pass
-
-            if self.connected_address:
-                self._set_device_status(self.connected_address, "Bluetooth OFF")
-            if self.pending_address and self.pending_address != self.connected_address:
-                self._set_device_status(self.pending_address, "Bluetooth OFF")
-
-            self.connected_address = None
-            self.pending_address = None
-            self.device_connected = False
+            self.ble_io.disconnect()
+            self._target_device = None
 
         if not has_adapter:
             self.status_label.setText("No Bluetooth adapter found.")
             self.open_settings_btn.setVisible(False)
-            self.bluetoothEnabledChanged.emit(False)
             self.device_section.setEnabled(False)
         elif enabled:
             self.status_label.setText("Bluetooth is ON")
             self.open_settings_btn.setVisible(False)
-            self.bluetoothEnabledChanged.emit(True)
             self.device_section.setEnabled(True)
         else:
             self.status_label.setText("Bluetooth is OFF")
             self.open_settings_btn.setVisible(True)
-            self.bluetoothEnabledChanged.emit(False)
-            self.device_section.setEnabled(False)
-
+            self.device_section.setEnabled(False)        
 
     def _on_device_clicked(self, device: DeviceWidget):
-        if self.device_connected:
-            msg = QMessageBox()
-            msg.setWindowIcon(QIcon("SCIDO.ico"))
-            msg.setIcon(QMessageBox.Icon.Warning)
-            msg.setWindowTitle("SCIDO - Confirm Device Connection")
-            msg.setText(
-                f"<b>Connecting to {device.name} will disconnect the current device.</b><br><br>"
-                "Do you want to continue?"
-            )
-            msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-            msg.setDefaultButton(QMessageBox.StandardButton.No)
-            if msg.exec() != QMessageBox.StandardButton.Yes:
-                return
-
-        if self.device_connected and self.connected_address == device.mac:
+        if self._target_device and self._target_device.mac == device.mac:
             return
-
-        previous_mac = self.connected_address if (self.connected_address and self.connected_address != device.mac) else None
-        # if previous_mac:
-        #     self._set_device_status(previous_mac, "Disconnecting...")
-
-        # #self.ble_io.disconnect()
-        # if previous_mac:
-        #     self._set_device_status(previous_mac, "Disconnected")
-
-        self.connected_address = None
-        self.device_connected = False
-
-        self.pending_address = device.mac
-        #self._set_device_status(self.pending_address, "Connecting...")
-        self.ble_io.connectTo(device.mac)
-        # self.parent().start_recording()
-        self.parent().datawindow.plot_update_timer.start()
-
+        
+        if self._target_device:
+            disconnect = self.confirm_connection_change(device)
+            if not disconnect:
+                return
+            self.ble_io.disconnect()
 
         print(f"Connecting to device: Name={device.name}, MAC={device.mac}")
+
+        self._target_device = device
+        self.ble_io.connectTo(device.mac)
+
+        self.parent().datawindow.plot_update_timer.start() # TODO: remove this once recording menu back/device monitor integrated
+
+    def confirm_connection_change(self, new_device: DeviceWidget):
+        msg = QMessageBox(parent=self)
+        msg.setIcon(QMessageBox.Icon.Warning)
+        msg.setWindowTitle("SCIDO - Confirm Device Connection")
+        msg.setText(
+            f"<b>Connecting to '{new_device.name}' will disconnect '{self._target_device.name}'.</b><br><br>"
+            "Do you want to continue?"
+        )
+        msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        msg.setDefaultButton(QMessageBox.StandardButton.No)
+
+        result = msg.exec()
+        return result == QMessageBox.StandardButton.Yes
+
 
     def closeEvent(self, event):
         try:

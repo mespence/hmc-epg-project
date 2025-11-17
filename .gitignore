@@ -33,6 +33,9 @@ software/data/**/sharpshooter_unlabeled/
 software/data/**/sharpshooter_parquet/
 software/data/**/windaq_files/
 
+# EPG device addresses
+epg_devices.json
+
 # Recording backups
 software/cs/gui/backups
 *.wav

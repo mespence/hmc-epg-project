@@ -8,11 +8,11 @@ from PyQt6.QtWidgets import (
 )
 
 if __name__ == "__main__":
-    root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..\\.."))
     if root_dir not in sys.path:
         sys.path.insert(0, root_dir)
 
-from bluetooth.BLEIOHandler import BLEIOHandler, ConnectionState
+from epg_board.bluetooth.BLEIOHandler import BLEIOHandler, ConnectionState
 
 BLE_ADDRESS = "C2:83:79:F8:C2:86"  # CS's test nRF board
 NOTIFY_CHARACTERISTIC_UUID = "445817D2-9E86-1078-1F76-703DC002EF42"

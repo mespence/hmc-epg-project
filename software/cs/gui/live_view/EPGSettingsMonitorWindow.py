@@ -12,7 +12,6 @@ from PyQt6.QtWidgets import (
 
 from epg_board.EPGControlState import EPGControlState, EPGControlKey
 
-
 class EPGSettingsMonitorWindow(QWidget):
     """
     Pop-up window to display the ground-truth engineering values of the EPG board controls.
