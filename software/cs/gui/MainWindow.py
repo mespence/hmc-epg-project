@@ -68,7 +68,7 @@ class MainWindow(QMainWindow):
         else:
             self.live_view_tab = LiveViewTab(parent=self)
         self.label_tab = LabelViewTab(self)
-
+            
         self.settings_window = SettingsWindow(self)
         self.about_window = AboutDialog(self)
 
@@ -107,7 +107,7 @@ class MainWindow(QMainWindow):
 
         
         file_menu.addSeparator()
-        file_menu.addAction("Settings", self.open_settings)
+        file_menu.addAction("SCIDO_Settings", self.open_settings)
         file_menu.addSeparator()
         file_menu.addAction("Exit App", self.close)
 
@@ -169,6 +169,7 @@ class MainWindow(QMainWindow):
         # Add tabs
         self.tabs.addTab(self.live_view_tab, "Live View")       
         self.tabs.addTab(self.label_tab, "Label View")
+
 
 
     # def open_upload_dialog(self):

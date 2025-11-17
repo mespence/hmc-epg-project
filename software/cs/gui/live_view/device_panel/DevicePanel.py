@@ -96,8 +96,7 @@ class DevicePanel(QWidget):
                 return
             for data_point in zip(timestamps, voltages):
                 #print((data_point[0] / 1e3, data_point[1] / 1000))
-                self.parent().datawindow.buffer_data.append((data_point[0] / 1e3, data_point[1] / 1000))            
-                self.parent().datawindow.current_time = data_point[0] / 1e3
+                self.parent().buffer_data.append((data_point[0] / 1e3, data_point[1] / 1000))            
 
         self.ble_io.dataBatchReceived.connect(place_batch_in_live_buffer)
         self.ble_io.connectionStateChanged.connect(self._on_bt_connected_changed)
@@ -240,20 +239,30 @@ class DevicePanel(QWidget):
 
     def _disconnect_device_clicked(self, device: DeviceWidget):
         if self._target_device and self._target_device.mac == device.mac:
-            self.ble_io.disconnect()
+           self._disconnect_current_device()
+
+    def _disconnect_current_device(self):
+        self.ble_io.disconnect()
+
+        self.parent().datawindow.plot_update_timer.stop()
+        self.parent().devicewindow.plot_update_timer.stop()
+
 
     # ---- BluetoothIO state reactions ----
     def _on_bt_connected_changed(self, state: ConnectionState):
+        print(state)
         self._target_device.set_status(state.value)
         self._target_device.update()
+
+        if state == ConnectionState.DISCONNECTED:
+            self._target_device = None
 
     def _on_bt_error(self, err: str, code: int):
         print(err) # TODO: make this more informative to the user
 
     def _on_bt_state_changed(self, has_adapter: bool, enabled: bool):
         if has_adapter and not enabled:
-            self.ble_io.disconnect()
-            self._target_device = None
+            self._disconnect_current_device()
 
         if not has_adapter:
             self.status_label.setText("No Bluetooth adapter found.")
@@ -283,7 +292,7 @@ class DevicePanel(QWidget):
         self._target_device = device
         self.ble_io.connectTo(device.mac)
 
-        self.parent().datawindow.plot_update_timer.start() # TODO: remove this once recording menu back/device monitor integrated
+        self.parent().devicewindow.plot_update_timer.start() # TODO make this check if its already startd?
 
     def confirm_connection_change(self, new_device: DeviceWidget):
         msg = QMessageBox(parent=self)

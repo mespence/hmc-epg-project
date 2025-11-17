@@ -325,6 +325,9 @@ class BLEIOHandler(QObject):
         await self._disconnect_sequence(reason="Reconnect attempts exhausted")
 
     async def _disconnect_sequence(self, reason: str = "") -> None:
+        if self._device is None or not self._device.is_connected:
+            return
+
         self._set_state(ConnectionState.DISCONNECTING)
 
         await self._cancel_task("_reconnect_task")

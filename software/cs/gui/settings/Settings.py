@@ -40,6 +40,7 @@ class Settings(QObject):
         "show_comments": True,
         "default_recording_directory": os.getcwd(),
         "backup_recording_directory": os.getcwd(),
+        "dm_range": 10,
         "default_min_voltage": -1.0,
         "default_max_voltage": 1.0,
     }
@@ -56,6 +57,7 @@ class Settings(QObject):
         "show_comments": bool,
         "default_recording_directory": str,
         "backup_recording_directory": str,
+        "dm_range": int,
         "default_min_voltage": float,
         "default_max_voltage": float,
     }

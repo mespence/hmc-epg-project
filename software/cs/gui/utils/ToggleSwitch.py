@@ -256,8 +256,6 @@ class ToggleSwitch(QWidget):
             self.right_label.setGeometry(0, 0, 0, 0)
 
 
-
-# Demo
 class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
@@ -271,7 +269,6 @@ class MainWindow(QWidget):
         # Example 2: left stays colored (no grey)
         self.toggle2 = ToggleSwitch("DC", "AC", disabled_left=False, active_color="#00c853")
         layout.addWidget(self.toggle2)
-
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

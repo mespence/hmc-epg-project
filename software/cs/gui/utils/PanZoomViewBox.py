@@ -3,7 +3,6 @@ from pyqtgraph import ViewBox, InfiniteLine
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QWheelEvent, QAction, QKeyEvent, QKeySequence
 from PyQt6.QtWidgets import QMenu
-
 from settings import settings
 from label_view.LabelArea import LabelArea
 
@@ -68,6 +67,8 @@ class PanZoomViewBox(ViewBox):
                 self.scaleBy((1, 1 / zoom_factor), center)
             else:
                 # x zoom
+                if getattr(self.datawindow, "window_type", "") == "device_view":
+                    return #disable in device_view
                 self.x_zoom(live, zoom_factor, center)
         else:
             # pan
@@ -80,7 +81,7 @@ class PanZoomViewBox(ViewBox):
                 dy = delta * v_zoom_factor * height
                 self.translateBy(y=dy)
             elif abs(x_delta) > abs(delta):  # trackpad horizontal swipe
-                if not live:
+                if not live and getattr(self.datawindow, "window_type", "") != "device_view":
                     h_zoom_factor = 2e-4
                     dx = -x_delta * h_zoom_factor * width  # note: negative for natural direction
 
@@ -228,14 +229,16 @@ class PanZoomViewBox(ViewBox):
         - Change label type submenu
         - Add comment option
 
-        Disabled in live mode.
+        Disabled in live mode and device view mode.
         """
         if self.datawindow is None:
             self.datawindow = self.parentItem().getViewWidget()
 
         live = getattr(self.datawindow, "live_mode", False)
+        device_view = getattr(self.datawindow, "window_type", "") == "device_view"
 
-        if live:
+
+        if live or device_view:
             event.ignore()
             return
         

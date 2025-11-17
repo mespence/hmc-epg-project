@@ -1,5 +1,6 @@
 import sys
 import time
+import threading
 import numpy as np
 
 from PyQt6.QtCore import Qt, QSize
@@ -9,11 +10,15 @@ from PyQt6.QtWidgets import (
 )
 
 from live_view.LiveDataWindow import LiveDataWindow
+from live_view.DeviceViewWindow import DeviceViewWindow
 from live_view.device_panel.DevicePanel import DevicePanel
 from live_view.slider_panel.SliderPanel import SliderPanel
+
 from epg_board.EPGStateManager import get_spec, get_state
+
 from utils.ResourcePath import resource_path
 from utils.SVGIcon import svg_to_colored_pixmap
+from utils.ToggleSwitch import ToggleSwitch
 
 
 class LiveViewTab(QWidget):
@@ -24,17 +29,27 @@ class LiveViewTab(QWidget):
         self.total_pause_time: float = 0  # the cumulative length of any pauses
         self.pause_start_time: float = None # unix timestamp of the most recent pause
 
+        # Buffer for incoming data, to be added to full xy_data every plot update
+        self.buffer_data: list[tuple[float, float]] = []
+        self.buffer_lock = threading.Lock() # lock to prevent data loss
+
+
         if recording_settings:
-            self.datawindow = LiveDataWindow(recording_settings, parent=self)
+            self.datawindow = LiveDataWindow(recording_settings, data_source = self, parent=self)
         else:
-            self.datawindow = LiveDataWindow(parent=self)
+            self.datawindow = LiveDataWindow(data_source = self, parent=self)
+
         self.datawindow.getPlotItem().hideButtons()
+
+        self.devicewindow = DeviceViewWindow(data_source=self)
+        self.devicewindow.getPlotItem().hideButtons()
+        self.devicewindow.setVisible(False)
 
         self._spec = get_spec()
         self.epg_settings = get_state(parent=self)  # parent is ignored if already created
-
+        self.deviceview_toggle = ToggleSwitch("Live View", "Device Monitoring", parent=self)
+        self.deviceview_toggle.toggled.connect(self.toggle_deviceview)
         
-
         self.pause_live_button = QPushButton("Pause Live View", self)
         self.pause_live_button.setCheckable(True)
         self.pause_live_button.setChecked(True)
@@ -166,22 +181,23 @@ class LiveViewTab(QWidget):
         
 
         bottom_controls = QHBoxLayout()
+        bottom_controls.addWidget(self.deviceview_toggle)
         bottom_controls.addStretch()
         bottom_controls.addWidget(self.pause_live_button)
         bottom_controls.addWidget(self.add_comment_button)
-        bottom_controls.addStretch()
 
         bottom_controls_widget = QWidget()
         bottom_controls_widget.setLayout(bottom_controls)
-        bottom_controls_widget.setStyleSheet("""
-            QWidget {
-                border-top: 1px solid #808080;
-            }
-        """)
+        # bottom_controls_widget.setStyleSheet("""
+        #     QWidget {
+        #         border-top: 1px solid #808080;
+        #     }
+        # """)
 
         center_layout = QVBoxLayout()
         center_layout.addWidget(top_controls_widget)
         center_layout.addWidget(self.datawindow)
+        center_layout.addWidget(self.devicewindow)
         center_layout.addWidget(bottom_controls_widget)
 
         main_layout = QHBoxLayout()
@@ -287,8 +303,6 @@ class LiveViewTab(QWidget):
 
         self.datawindow.plot_update_timer.start()
 
-
-
     def stop_recording(self):
         self.datawindow.plot_update_timer.stop()
         self.datawindow.buffer_data.clear()
@@ -301,4 +315,17 @@ class LiveViewTab(QWidget):
 
         self.slider_panel.start_button.setEnabled(True)
         self.slider_panel.pause_button.setEnabled(False)
-        self.slider_panel.stop_button.setEnabled(False)
+
+    def toggle_deviceview(self):
+        if self.datawindow.isVisible():
+            self.datawindow.setVisible(False)
+            self.pause_live_button.setVisible(False)
+            self.add_comment_button.setVisible(False)
+            self.devicewindow.setVisible(True)
+        else:
+            self.datawindow.setVisible(True)
+            self.pause_live_button.setVisible(True)
+            self.add_comment_button.setVisible(True)
+            self.devicewindow.setVisible(False)
+
+    

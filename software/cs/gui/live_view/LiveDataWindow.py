@@ -1,4 +1,3 @@
-import re
 import os
 import sys
 import csv
@@ -34,7 +33,7 @@ class LiveDataWindow(PlotWidget):
     - Periodic auto-backup of waveform and comments.
     - Export functionality for waveform data and comments.
     """
-    def __init__(self, recording_settings = None, parent = None):
+    def __init__(self, data_source = None, recording_settings = None, parent = None):
         """
         Initializes the LiveDataWindow widget.
 
@@ -43,11 +42,13 @@ class LiveDataWindow(PlotWidget):
         periodiic auto-backup.
         """
         # --- GENERAL INIT ITEMS ---
-        super().__init__(parent = parent, viewBox=PanZoomViewBox(datawindow=self))
+        custom_viewbox = PanZoomViewBox(datawindow=self)
+        super().__init__(parent=parent, viewBox=custom_viewbox)
+
         self.setMinimumWidth(300)
 
         self.plot_item: PlotItem = self.getPlotItem()
-        self.viewbox: PanZoomViewBox = self.plot_item.getViewBox() # the plotting area (no axes, etc.)
+        self.viewbox: PanZoomViewBox = custom_viewbox
         self.viewbox.datawindow = self
         self.viewbox.menu = None  # disable default menu
 
@@ -111,9 +112,17 @@ class LiveDataWindow(PlotWidget):
         self.epgdata = self.parent().parent().epgdata
         self.xy_data: list[NDArray] = [np.array([]), np.array([])]
 
-        # temporary buffer for incoming data, to be added to full xy_data every plot update
-        self.buffer_data: list[tuple[float, float]] = []
-        self.buffer_lock = threading.Lock() # lock to prevent data loss
+       # connect to the live view tab's data buffer
+        self.data_source = data_source
+
+        if self.data_source is not None:
+            # share buffer and lock from the tab
+            self.buffer_data = self.data_source.buffer_data
+            self.buffer_lock = self.data_source.buffer_lock
+        else:
+            # fallback if no data_source passed
+            self.buffer_data = []
+            self.buffer_lock = threading.Lock()
 
         # store currently rendered data (downsampled for display)
         self.xy_rendered: list[NDArray] = [np.array([]), np.array([])]
@@ -262,6 +271,8 @@ class LiveDataWindow(PlotWidget):
 
         self.xy_data[0] = np.concatenate((self.xy_data[0], new_xy_data[:, 0]))
         self.xy_data[1] = np.concatenate((self.xy_data[1], new_xy_data[:, 1]))
+
+        self.current_time = new_xy_data[-1,0]
 
     def timed_plot_update(self):
         """
@@ -754,40 +765,40 @@ class LiveDataWindow(PlotWidget):
         self.baseline_preview_enabled = False
         self.baseline_preview.setVisible(False)
 
-    def plot_recording(self, file: str):
-        """
-        Loads the time series and comments from a file and displays it.
+    # def plot_recording(self, file: str):
+    #     """
+    #     Loads the time series and comments from a file and displays it.
 
-        Parameters:
-            file (str): File identifier.
-        """
-        QGuiApplication.setOverrideCursor(QCursor(Qt.CursorShape.WaitCursor))
-        self.file = file
-        times, volts = self.epgdata.get_recording(self.file)
-        self.xy_data[0] = times
-        self.xy_data[1] = volts
-        self.downsample_visible(self.xy_data)
-        #init_x, init_y = self.xy_data[0].copy(), self.xy_data[1].copy()
-        self.curve.setData(self.xy_data[0], self.xy_data[1])
-        #self.initial_downsampled_data = [init_x, init_y]
-        self.df = self.epgdata.dfs[file]  
+    #     Parameters:
+    #         file (str): File identifier.
+    #     """
+    #     QGuiApplication.setOverrideCursor(QCursor(Qt.CursorShape.WaitCursor))
+    #     self.file = file
+    #     times, volts = self.epgdata.get_recording(self.file)
+    #     self.xy_data[0] = times
+    #     self.xy_data[1] = volts
+    #     self.downsample_visible(self.xy_data)
+    #     #init_x, init_y = self.xy_data[0].copy(), self.xy_data[1].copy()
+    #     self.curve.setData(self.xy_data[0], self.xy_data[1])
+    #     #self.initial_downsampled_data = [init_x, init_y]
+    #     self.df = self.epgdata.dfs[file]  
 
-        self.viewbox.setRange(
-            xRange=(np.min(self.xy_data[0]), np.max(self.xy_data[0])), 
-            yRange=(np.min(self.xy_data[1]), np.max(self.xy_data[1])), 
-            padding=0
-        )
+    #     self.viewbox.setRange(
+    #         xRange=(np.min(self.xy_data[0]), np.max(self.xy_data[0])), 
+    #         yRange=(np.min(self.xy_data[1]), np.max(self.xy_data[1])), 
+    #         padding=0
+    #     )
 
-        # create a comments column if doesn't yet exist in df
-        if 'comments' not in self.df.columns:
-            self.df['comments'] = None
+    #     # create a comments column if doesn't yet exist in df
+    #     if 'comments' not in self.df.columns:
+    #         self.df['comments'] = None
 
-        self.current_time = self.df['time'].iloc[-1]
+    #     self.current_time = self.df['time'].iloc[-1]
         
-        self.update_plot()
-        self.plot_comments(file)
-        QGuiApplication.processEvents()
-        QGuiApplication.restoreOverrideCursor()
+    #     self.update_plot()
+    #     self.plot_comments(file)
+    #     QGuiApplication.processEvents()
+    #     QGuiApplication.restoreOverrideCursor()
 
 
     def plot_comments(self, file: str) -> None:
