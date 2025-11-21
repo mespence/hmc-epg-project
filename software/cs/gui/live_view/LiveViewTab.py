@@ -140,32 +140,32 @@ class LiveViewTab(QWidget):
 
         top_controls = QHBoxLayout()
 
-        if sys.platform.startswith("win"):
-            self.device_panel = DevicePanel(parent=self)
-            self.device_button = QToolButton(parent=self)
-            self.device_button.setText("EPG Devices")
-            icon_path = resource_path("resources/icons/bug.svg")
-            colored_icon = QIcon(svg_to_colored_pixmap(icon_path, "#DDDDDD", 24))
-            self.device_button.setIcon(colored_icon)
-            self.device_button.setIconSize(QSize(24, 24))
-            self.device_button.setToolTip("Open EPG devices")
-            self.device_button.setAutoRaise(True)
-            self.device_button.setCursor(Qt.CursorShape.PointingHandCursor)
-            self.device_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-            self.device_button.clicked.connect(self.toggleDevicePanel)
-            self.device_button.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-            self.device_button.setStyleSheet("""
-                QToolButton {                    
-                    outline: none;
-                } QToolButton:disabled {
-                    color: gray;               
-                    qproperty-icon: none;
-                }
-                QToolButton:focus {
-                    outline 3px solid #4aa8ff;
-                }
-            """)
-            top_controls.addWidget(self.device_button)
+        
+        self.device_panel = DevicePanel(parent=self)
+        self.device_button = QToolButton(parent=self)
+        self.device_button.setText("EPG Devices")
+        icon_path = resource_path("resources/icons/bug.svg")
+        colored_icon = QIcon(svg_to_colored_pixmap(icon_path, "#DDDDDD", 24))
+        self.device_button.setIcon(colored_icon)
+        self.device_button.setIconSize(QSize(24, 24))
+        self.device_button.setToolTip("Open EPG devices")
+        self.device_button.setAutoRaise(True)
+        self.device_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.device_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.device_button.clicked.connect(self.toggleDevicePanel)
+        self.device_button.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.device_button.setStyleSheet("""
+            QToolButton {                    
+                outline: none;
+            } QToolButton:disabled {
+                color: gray;               
+                qproperty-icon: none;
+            }
+            QToolButton:focus {
+                outline 3px solid #4aa8ff;
+            }
+        """)
+        top_controls.addWidget(self.device_button)
 
         top_controls.addStretch()  # push slider button to right
         top_controls.addWidget(self.slider_button)
@@ -201,8 +201,7 @@ class LiveViewTab(QWidget):
         center_layout.addWidget(bottom_controls_widget)
 
         main_layout = QHBoxLayout()
-        if sys.platform.startswith("win"):
-            main_layout.addWidget(self.device_panel, 2)
+        main_layout.addWidget(self.device_panel, 2)
         main_layout.addLayout(center_layout, 15)
         main_layout.addWidget(self.slider_panel, 5)
 
@@ -210,6 +209,8 @@ class LiveViewTab(QWidget):
         # self.setTabOrder(self.pause_live_button, self.add_comment_button)
         # self.setTabOrder(self.add_comment_button, self.slider_button)
         # self.setTabOrder(self.slider_button, self.pause_live_button)
+
+        self.epg_settings.changed.connect(lambda key,_,new: self.device_panel.ble_io.sendCommand(key, new))
 
         self.setLayout(main_layout)
 
