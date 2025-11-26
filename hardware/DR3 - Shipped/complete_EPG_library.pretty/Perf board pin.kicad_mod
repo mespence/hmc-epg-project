@@ -1,0 +1,125 @@
+(footprint "Perf board pin"
+	(version 20240108)
+	(generator "pcbnew")
+	(generator_version "8.0")
+	(layer "F.Cu")
+	(descr "solder Pin_ diameter 1.0mm, hole diameter 1.0mm (press fit), length 10.0mm")
+	(tags "solder Pin_ press fit")
+	(property "Reference" "REF**554"
+		(at 0 2.25 0)
+		(layer "F.SilkS")
+		(hide yes)
+		(uuid "8a6d4ae6-cbd0-49e5-99a3-e56b3c43ae70")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Value" "Perf board pin"
+		(at 0 -2.05 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "38286c09-d513-4c88-8131-eb576acda751")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Footprint" "complete_EPG_library:Perf board pin"
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "f89f22b5-a6ff-4ea5-94d7-3a502cc2c687")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" ""
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "f4081221-4bd6-408b-9e6a-049f5af0ef8c")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "247cf032-3f24-4daf-93b2-122cdc39926e")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(attr through_hole board_only exclude_from_bom)
+	(fp_circle
+		(center -0.01 0)
+		(end 0.970816 0)
+		(stroke
+			(width 0.03)
+			(type default)
+		)
+		(fill none)
+		(layer "F.CrtYd")
+		(uuid "f9c65f06-ebbc-4455-817f-0c1e87351911")
+	)
+	(fp_circle
+		(center 0 0)
+		(end 0.5 0)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(fill none)
+		(layer "F.Fab")
+		(uuid "2eb3ec4b-8473-4e85-a24c-0bac47b04f74")
+	)
+	(fp_text user "${REFERENCE}"
+		(at 0 2.25 0)
+		(layer "F.Fab")
+		(uuid "fcf7775a-009a-4182-9223-cc83f2fb5e3e")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(pad "" thru_hole circle
+		(at -0.01 0)
+		(size 1.7 1.7)
+		(drill 1)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "3358d336-26d9-47ad-93de-033446e95cf1")
+	)
+	(model "${KICAD8_3DMODEL_DIR}/Connector_Pin.3dshapes/Pin_D1.0mm_L10.0mm.wrl"
+		(hide yes)
+		(offset
+			(xyz 0 0 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
+)

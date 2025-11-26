@@ -1,0 +1,6 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "complete_EPG_library")(type "KiCad")(uri "${KIPRJMOD}/complete_EPG_library/complete_EPG_library.pretty")(options "")(descr ""))
+  (lib (name "pga")(type "KiCad")(uri "${KIPRJMOD}/pga.pretty")(options "")(descr ""))
+  (lib (name "symbols-and-footprints")(type "KiCad")(uri "${KIPRJMOD}/symbols-and-footprints.pretty")(options "")(descr ""))
+)

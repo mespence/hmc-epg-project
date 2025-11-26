@@ -1,0 +1,368 @@
+(footprint "Battery_Sockets"
+	(version 20240108)
+	(generator "pcbnew")
+	(generator_version "8.0")
+	(layer "F.Cu")
+	(descr "solder Pin_ diameter 1.3mm, hole diameter 1.3mm, length 11.0mm")
+	(tags "solder Pin_ pressfit")
+	(property "Reference" "REF**"
+		(at 7.16 3.52 0)
+		(layer "F.SilkS")
+		(hide yes)
+		(uuid "f09af089-c756-433e-8d0e-5294655d2022")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Value" "Battery_Sockets"
+		(at 6.18 -2.27 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "ff8443cc-fa85-46c2-a308-9f7b8caf77ba")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Footprint" ""
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "9bee7d4b-6c1e-45da-b7f2-c2e72bab1aca")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" ""
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "126c950f-120c-4cca-bf16-b104c2f57b97")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "617d8649-bf76-440c-b729-72ed12a0d401")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(attr through_hole)
+	(fp_circle
+		(center 0 0)
+		(end 1.6 0.05)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(fill none)
+		(layer "F.SilkS")
+		(uuid "0559dfc9-2a3f-4e58-b8eb-c86778ff17e7")
+	)
+	(fp_circle
+		(center 4.5 0.1)
+		(end 6.1 0.15)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(fill none)
+		(layer "F.SilkS")
+		(uuid "d63a520a-7bdd-4ff7-93bb-d79c12ec5811")
+	)
+	(fp_circle
+		(center 9 0.1)
+		(end 10.6 0.15)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(fill none)
+		(layer "F.SilkS")
+		(uuid "90b7a2ae-3f7f-4283-8d4e-bb159179a5ba")
+	)
+	(fp_circle
+		(center 13.5 0.1)
+		(end 15.1 0.15)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(fill none)
+		(layer "F.SilkS")
+		(uuid "1daed9f4-47e5-4acd-b6af-53a9b180893d")
+	)
+	(fp_circle
+		(center 0 0)
+		(end 1.8 0)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(fill none)
+		(layer "F.CrtYd")
+		(uuid "1ae8b187-6b1c-42a8-9c1f-39101970beb6")
+	)
+	(fp_circle
+		(center 4.5 0.1)
+		(end 6.3 0.1)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(fill none)
+		(layer "F.CrtYd")
+		(uuid "c6411d39-8279-4ad0-a4f2-fb6dee04fcba")
+	)
+	(fp_circle
+		(center 9 0.1)
+		(end 10.8 0.1)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(fill none)
+		(layer "F.CrtYd")
+		(uuid "038d7772-eb7b-4869-9aec-bb1475f023ca")
+	)
+	(fp_circle
+		(center 13.5 0.1)
+		(end 15.3 0.1)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(fill none)
+		(layer "F.CrtYd")
+		(uuid "37a5d27c-3ea1-40f8-9a90-c2b662504093")
+	)
+	(fp_circle
+		(center 0 0)
+		(end 0.65 -0.05)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(fill none)
+		(layer "F.Fab")
+		(uuid "3b85e1bd-2543-4424-a60e-3ccc45f372eb")
+	)
+	(fp_circle
+		(center 0 0)
+		(end 1.25 -0.05)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(fill none)
+		(layer "F.Fab")
+		(uuid "052e5e46-b5a6-4952-b259-92ef7b543482")
+	)
+	(fp_circle
+		(center 4.5 0.1)
+		(end 5.15 0.05)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(fill none)
+		(layer "F.Fab")
+		(uuid "0f1fa38e-b306-4d12-a898-f64b97cb9305")
+	)
+	(fp_circle
+		(center 4.5 0.1)
+		(end 5.75 0.05)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(fill none)
+		(layer "F.Fab")
+		(uuid "aa80fbb6-f605-4628-9343-68ff378fcf16")
+	)
+	(fp_circle
+		(center 9 0.1)
+		(end 9.65 0.05)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(fill none)
+		(layer "F.Fab")
+		(uuid "956682aa-561d-4022-bd7f-b0d49168a7ea")
+	)
+	(fp_circle
+		(center 9 0.1)
+		(end 10.25 0.05)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(fill none)
+		(layer "F.Fab")
+		(uuid "885669f9-e635-4e19-b6f4-4e7aab4ebeb2")
+	)
+	(fp_circle
+		(center 13.5 0.1)
+		(end 14.15 0.05)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(fill none)
+		(layer "F.Fab")
+		(uuid "0ec668de-2f41-412d-99ed-25145bd8af99")
+	)
+	(fp_circle
+		(center 13.5 0.1)
+		(end 14.75 0.05)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(fill none)
+		(layer "F.Fab")
+		(uuid "460e7ba5-2518-441a-8336-f54bbf05a966")
+	)
+	(fp_text user "-"
+		(at 5.16 2.09 180)
+		(unlocked yes)
+		(layer "F.SilkS")
+		(uuid "0edb2bf1-4344-44d2-a62c-f1c25b9bc782")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.127)
+			)
+			(justify left bottom)
+		)
+	)
+	(fp_text user "Battery Power"
+		(at 1.67 -1.91 0)
+		(unlocked yes)
+		(layer "F.SilkS")
+		(uuid "45fe9d6b-1e66-4da8-803e-0ecf55c0385d")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+			(justify left bottom)
+		)
+	)
+	(fp_text user "+"
+		(at -0.68 3.05 0)
+		(unlocked yes)
+		(layer "F.SilkS")
+		(uuid "7ea317fa-2c9a-4cc7-b1af-15dbd3246b93")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.127)
+			)
+			(justify left bottom)
+		)
+	)
+	(fp_text user "-"
+		(at 14.33 2.14 180)
+		(unlocked yes)
+		(layer "F.SilkS")
+		(uuid "8f64e352-0ebb-439f-b193-173aa401023b")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.127)
+			)
+			(justify left bottom)
+		)
+	)
+	(fp_text user "+"
+		(at 8.3 3.12 0)
+		(unlocked yes)
+		(layer "F.SilkS")
+		(uuid "b27f1285-c27f-4cf4-9e72-3c834035cb07")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.127)
+			)
+			(justify left bottom)
+		)
+	)
+	(fp_text user "${REFERENCE}"
+		(at -0.93 3.23 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "5d86067d-6d1a-4a2c-ad7b-0db4529aef4a")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(pad "1" thru_hole circle
+		(at 0 0)
+		(size 2.6 2.6)
+		(drill 1.3)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "3106b007-6df2-449f-8479-b49706f8155b")
+	)
+	(pad "2" thru_hole circle
+		(at 4.5 0.1)
+		(size 2.6 2.6)
+		(drill 1.3)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "6e2409e4-8c75-463e-9f7d-a47c18e29b8b")
+	)
+	(pad "3" thru_hole circle
+		(at 9 0.1)
+		(size 2.6 2.6)
+		(drill 1.3)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "96486413-16af-42a6-90cd-b0a894f8a35b")
+	)
+	(pad "4" thru_hole circle
+		(at 13.5 0.1)
+		(size 2.6 2.6)
+		(drill 1.3)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "e8ebfa62-21ec-4c33-a3c9-fd25cfb7cfea")
+	)
+	(model "${KICAD8_3DMODEL_DIR}/Connector_Pin.3dshapes/Pin_D1.3mm_L11.0mm.wrl"
+		(offset
+			(xyz 0 0 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
+)

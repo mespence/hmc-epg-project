@@ -1,0 +1,125 @@
+(footprint "Right angle BNC 0731010120"
+	(version 20240108)
+	(generator "pcbnew")
+	(generator_version "8.0")
+	(layer "F.Cu")
+	(property "Reference" "REF**"
+		(at -5 -18 0)
+		(unlocked yes)
+		(layer "F.SilkS")
+		(uuid "80111517-52c0-4ecc-be72-c3c3e71cb007")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+		)
+	)
+	(property "Value" "Right angle BNC 0731010120"
+		(at -5 -15.5 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "b4ac1ed0-f554-46e4-9a01-0093f010c9bf")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Footprint" ""
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "878eb678-19da-4215-ae1d-531777340276")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" ""
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "866c5ae8-1192-4455-ba4b-656c1b96ca41")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "6089c279-7abe-4b13-95a4-f294a6eaaf62")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(attr through_hole)
+	(fp_text user "${REFERENCE}"
+		(at -5 -14 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "52e2cdce-523c-432d-a25b-afa2ca14a33f")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(pad "1" thru_hole circle
+		(at -5.08 -5.08)
+		(size 1.905 1.905)
+		(drill 0.889)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "848ca124-1cf6-410b-b6be-e7a4e26eb66a")
+	)
+	(pad "2" thru_hole circle
+		(at -10.16 -10.16)
+		(size 3.81 3.81)
+		(drill 2.0066)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "529bcd58-0ce8-449f-aa53-fc3cebdf68bb")
+	)
+	(pad "2" thru_hole circle
+		(at -7.62 -5.08)
+		(size 1.905 1.905)
+		(drill 0.889)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "f507e28a-b0a2-421d-a831-4f64dc797305")
+	)
+	(pad "2" thru_hole circle
+		(at 0 -10.16)
+		(size 3.81 3.81)
+		(drill 2.0066)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "136f844b-d4fe-4d0a-a51a-ad84274dad2c")
+	)
+	(model "${KIPRJMOD}/complete_EPG_library/step files/731010120.stp"
+		(offset
+			(xyz -5 38.2 6.5)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz -90 0 180)
+		)
+	)
+)
